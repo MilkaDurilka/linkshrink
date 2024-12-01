@@ -30,9 +30,10 @@ func TestURLService_Shortcut(t *testing.T) {
     service := service.NewURLService(mockRepo)
 
     originalURL := "http://example.com"
+		baseURL := "http://localhost:8080/"
     mockRepo.On("Save", mock.Anything, originalURL).Return(nil)
 
-    shortenedURL, err := service.Shorten(originalURL)
+    shortenedURL, err := service.Shorten(baseURL, originalURL)
 
     require.NoError(t, err)
     assert.Contains(t, shortenedURL, "http://localhost:8080/") // Проверяем, что URL содержит базовый адрес
@@ -43,8 +44,9 @@ func TestURLService_Shortcut(t *testing.T) {
 func TestURLService_Shortcut_InvalidURL(t *testing.T) {
     mockRepo := new(MockRepository)
     srv := service.NewURLService(mockRepo)
+		baseURL := "http://localhost:8080/"
 
-    shortenedURL, err := srv.Shorten("")
+    shortenedURL, err := srv.Shorten(baseURL, "")
     assert.Equal(t, service.ErrInvalidURL, err)
     assert.Empty(t, shortenedURL)
 }

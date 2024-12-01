@@ -12,7 +12,7 @@ var (
 
 // Определите интерфейс URLService
 type IURLService interface {
-	Shorten(url string) (string, error)
+	Shorten(baseURL string, url string) (string, error)
 	GetOriginalURL(id string) (string, error)
 }
 
@@ -30,7 +30,7 @@ func NewURLService(repo repository.IURLRepository) *URLService {
 }
 
 // Shorten сокращает оригинальный URL
-func (s *URLService) Shorten(originalURL string) (string, error) {
+func (s *URLService) Shorten(baseURL string, originalURL string) (string, error) {
     if originalURL == "" {
         return "", ErrInvalidURL
     }
@@ -40,7 +40,8 @@ func (s *URLService) Shorten(originalURL string) (string, error) {
     if err := s.repo.Save(id, originalURL); err != nil {
         return "", err
     }
-    return "http://localhost:8080/" + id, nil
+
+    return baseURL + id, nil
 }
 
 // GetOriginalURL получает оригинальный URL по ID

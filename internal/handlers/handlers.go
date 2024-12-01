@@ -1,20 +1,22 @@
 package handlers
 
 import (
-    "log"
-    "net/http"
-    "github.com/gorilla/mux"
-    "linkshrink/internal/controller"
+	"linkshrink/internal/config"
+	"linkshrink/internal/controller"
+	"log"
+	"net/http"
+
+	"github.com/gorilla/mux"
 )
 
 
-func StartServer(urlController controller.IURLController) error {
+func StartServer(cfg *config.Config, urlController controller.IURLController) error {
     r := mux.NewRouter()
 
     r.HandleFunc("/", urlController.ShortenURL).Methods("POST")
     r.HandleFunc("/{id}", urlController.RedirectURL).Methods("GET")
 
-    log.Println("Starting server on :8080")
+    log.Println("Starting server on: " + cfg.Address)
 		
-    return http.ListenAndServe(":8080", r)
+    return http.ListenAndServe(cfg.Address, r)
 }

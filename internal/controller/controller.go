@@ -3,6 +3,7 @@ package controller
 import (
 	"errors"
 	"io"
+	"linkshrink/internal/config"
 	"linkshrink/internal/service"
 	"net/http"
 
@@ -16,11 +17,12 @@ type IURLController interface {
 
 type URLController struct {
     service service.IURLService // Ссылка на сервис для работы с URL
+		cfg *config.Config
 }
 
 // NewURLController создает новый экземпляр URLController
-func NewURLController(service service.IURLService) *URLController {
-    return &URLController{service: service} // Возвращаем новый контроллер с заданным сервисом
+func NewURLController(cfg *config.Config, service service.IURLService) *URLController {
+    return &URLController{service: service, cfg: cfg} // Возвращаем новый контроллер с заданным сервисом
 }
 
 // ShortenURL обрабатывает запрос на сокращение URL
@@ -32,7 +34,7 @@ func (c *URLController) ShortenURL(w http.ResponseWriter, r *http.Request) {
     }
 		defer r.Body.Close() // Закрываем тело запроса после его чтения
 
-    shortURL, err := c.service.Shorten(string(url))
+    shortURL, err := c.service.Shorten(c.cfg.BaseURL, string(url))
 		if err != nil {
 			// Проверяем тип ошибки и отправляем соответствующий ответ
 			if errors.Is(err, service.ErrInvalidURL) {

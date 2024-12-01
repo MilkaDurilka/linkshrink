@@ -8,12 +8,13 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	"linkshrink/internal/config"
 	"linkshrink/internal/service"
 
+	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-		"github.com/gorilla/mux"
 )
 
 // MockURLService - мок-сервис для тестирования с использованием testify
@@ -21,14 +22,19 @@ type MockURLService struct {
 	mock.Mock
 }
 
-func (m *MockURLService) Shorten(url string) (string, error) {
-	args := m.Called(url)
+func (m *MockURLService) Shorten(baseURL string, url string) (string, error) {
+	args := m.Called(baseURL, url)
 	return args.String(0), args.Error(1)
 }
 
 func (m *MockURLService) GetOriginalURL(id string) (string, error) {
 	args := m.Called(id)
 	return args.String(0), args.Error(1)
+}
+
+var cfg = config.Config{
+	Address: "Address",
+	BaseURL: "BaseURL",
 }
 
 func TestShortenURL(t *testing.T) {
@@ -43,7 +49,7 @@ func TestShortenURL(t *testing.T) {
 			name:         "Valid URL",
 			body:         "http://example.com",
 			mockShorten: func(m *MockURLService) {
-				m.On("Shorten", "http://example.com").Return("short.ly/abc123", nil)
+				m.On("Shorten", "BaseURL","http://example.com").Return("short.ly/abc123", nil)
 			},
 			expectedCode: http.StatusCreated,
 			expectedBody: "short.ly/abc123",
@@ -58,7 +64,7 @@ func TestShortenURL(t *testing.T) {
 			name: "Invalid URL",
 			body: "http://invalid-url",
 			mockShorten: func(m *MockURLService) {
-				m.On("Shorten", "http://invalid-url").Return("", service.ErrInvalidURL)
+				m.On("Shorten", "BaseURL", "http://invalid-url").Return("", service.ErrInvalidURL)
 			},
 			expectedCode: http.StatusBadRequest,
 			expectedBody: "Invalid URL\n",
@@ -67,7 +73,7 @@ func TestShortenURL(t *testing.T) {
 			name: "Internal Server Error",
 			body: "http://example.com",
 			mockShorten: func(m *MockURLService) {
-				m.On("Shorten", "http://example.com").Return("", errors.New("some error"))
+				m.On("Shorten", "BaseURL", "http://example.com").Return("", errors.New("some error"))
 			},
 			expectedCode: http.StatusInternalServerError,
 			expectedBody: "Error shortening URL\n",
@@ -80,7 +86,8 @@ func TestShortenURL(t *testing.T) {
 			if tt.mockShorten != nil {
 				tt.mockShorten(mockService)
 			}
-			controller := NewURLController(mockService)
+
+			controller := NewURLController(&cfg, mockService)
 
 			req := httptest.NewRequest("POST", "/shorten", bytes.NewBufferString(tt.body))
 			rr := httptest.NewRecorder()
@@ -142,7 +149,7 @@ func TestRedirectURL(t *testing.T) {
 			if tt.mockGetOriginal != nil {
 				tt.mockGetOriginal(mockService)
 			}
-			controller := NewURLController(mockService)
+			controller := NewURLController(&cfg, mockService)
 			r := mux.NewRouter()
 	    r.HandleFunc("/{id}", controller.RedirectURL)
 
