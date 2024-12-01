@@ -33,7 +33,7 @@ func (s *URLService) Shorten(originalURL string) (string, error) {
     if err := s.repo.Save(id, originalURL); err != nil {
         return "", err
     }
-    return id, nil
+    return "http://localhost:8080/" + id, nil
 }
 
 // GetOriginalURL получает оригинальный URL по ID
