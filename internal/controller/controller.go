@@ -4,18 +4,23 @@ import (
 	"errors"
 	"io"
 	"linkshrink/internal/service"
-	"net/http"                   
+	"log"
+	"net/http"
 
 	"github.com/gorilla/mux"
 )
 
+type IURLController interface {
+	ShortenURL (w http.ResponseWriter, r *http.Request)
+	RedirectURL(w http.ResponseWriter, r *http.Request)
+}
 
 type URLController struct {
-    service *service.URLService // Ссылка на сервис для работы с URL
+    service service.IURLService // Ссылка на сервис для работы с URL
 }
 
 // NewURLController создает новый экземпляр URLController
-func NewURLController(service *service.URLService) *URLController {
+func NewURLController(service service.IURLService) *URLController {
     return &URLController{service: service} // Возвращаем новый контроллер с заданным сервисом
 }
 
@@ -48,9 +53,9 @@ func (c *URLController) ShortenURL(w http.ResponseWriter, r *http.Request) {
 func (c *URLController) RedirectURL(w http.ResponseWriter, r *http.Request) {
     vars := mux.Vars(r) // Получаем переменные маршрута
     id := vars["id"] // Извлекаем ID из переменных маршрута
-
-    // Получаем оригинальный URL по ID с помощью сервиса
+    
     originalURL, err := c.service.GetOriginalURL(id)
+		
     if err != nil {
         if errors.Is(err, service.ErrURLNotFound) {
             http.Error(w, "URL not found", http.StatusBadRequest) // Если URL не найден, отправляем ответ 400 StatusBadRequest

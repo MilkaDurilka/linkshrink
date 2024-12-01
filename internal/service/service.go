@@ -10,12 +10,19 @@ var (
     ErrURLNotFound = errors.New("URL not found")
 )
 
+// Определите интерфейс URLService
+type IURLService interface {
+	Shorten(url string) (string, error)
+	GetOriginalURL(id string) (string, error)
+}
+
+
 type URLService struct {
-    repo *repository.URLRepository
+    repo repository.IURLRepository
 		idGenerator *IDGenerator
 }
 
-func NewURLService(repo *repository.URLRepository) *URLService {
+func NewURLService(repo repository.IURLRepository) *URLService {
   return &URLService{ // Возвращаем новый сервис с заданным репозиторием
 			repo:        repo,
 			idGenerator: NewIDGenerator(),

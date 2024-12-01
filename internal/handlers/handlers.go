@@ -8,7 +8,7 @@ import (
 )
 
 
-func StartServer(urlController *controller.URLController) error {
+func StartServer(urlController controller.IURLController) error {
     r := mux.NewRouter()
 
     r.HandleFunc("/", urlController.ShortenURL).Methods("POST")

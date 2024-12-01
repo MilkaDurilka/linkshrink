@@ -1,9 +1,14 @@
 package repository
 
 import (
-    "errors"
-    "sync"
+	"errors"
+	"sync"
 )
+
+type IURLRepository interface {
+	Save(id, originalURL string) error
+	Find(id string) (string, error)
+}
 
 type URLRepository struct {
     store map[string]string // Хранилище для хранения пар ID и оригинальных URL
