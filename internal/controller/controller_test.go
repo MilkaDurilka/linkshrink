@@ -153,6 +153,10 @@ func TestRedirectURL(t *testing.T) {
 			r.ServeHTTP(rr, req)
 
 			res := rr.Result()
+			
+			err := res.Body.Close()
+			require.NoError(t, err)
+
 			assert.Equal(t, tt.expectedCode, res.StatusCode)
 
 			if tt.expectedCode == http.StatusTemporaryRedirect {
