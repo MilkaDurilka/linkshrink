@@ -1,8 +1,8 @@
 package config
 
 import (
-    "flag"
-    "fmt"
+	"flag"
+	"os"
 )
 
 // Config - структура для хранения конфигурации сервиса
@@ -13,16 +13,27 @@ type Config struct {
 
 // InitConfig - функция для инициализации конфигурации из аргументов командной строки
 func InitConfig() (*Config, error) {
-    address := flag.String("a", "localhost:8080", "HTTP server address")
-    baseURL := flag.String("b", "http://localhost:8080", "Base URL for the shortened URL")
+    addressFlag := flag.String("a", "localhost:8080", "HTTP server address")
+    baseURLFlag := flag.String("b", "http://localhost:8080", "Base URL for the shortened URL")
 
     flag.Parse()
 
-    if *baseURL == "" {
-        return nil, fmt.Errorf("base URL cannot be empty")
-    }
+		addressEnv := os.Getenv("SERVER_ADDRESS")
+    baseURLEnv := os.Getenv("BASE_URL")
+
+    address := getValue(addressEnv, addressFlag)
+		baseURL := getValue(baseURLEnv, baseURLFlag)
+   
     return &Config{
-        Address: *address,
-        BaseURL: *baseURL,
+        Address: address,
+        BaseURL: baseURL,
     }, nil
+}
+
+func getValue(envVar string, flagValue *string) string {
+	if envVar != "" {
+			return envVar
+	}
+
+	return *flagValue
 }
