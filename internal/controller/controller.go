@@ -4,7 +4,6 @@ import (
 	"errors"
 	"io"
 	"linkshrink/internal/service"
-	"log"
 	"net/http"
 
 	"github.com/gorilla/mux"
