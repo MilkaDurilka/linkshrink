@@ -14,14 +14,13 @@ type Config struct {
 // InitConfig - функция для инициализации конфигурации из аргументов командной строки
 func InitConfig() (*Config, error) {
     address := flag.String("a", "localhost:8080", "HTTP server address")
-    baseURL := flag.String("b", "http://localhost:8080/", "Base URL for the shortened URL")
+    baseURL := flag.String("b", "http://localhost:8080", "Base URL for the shortened URL")
 
     flag.Parse()
 
     if *baseURL == "" {
         return nil, fmt.Errorf("base URL cannot be empty")
     }
-
     return &Config{
         Address: *address,
         BaseURL: *baseURL,

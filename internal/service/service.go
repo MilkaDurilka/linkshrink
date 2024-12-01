@@ -41,7 +41,7 @@ func (s *URLService) Shorten(baseURL string, originalURL string) (string, error)
         return "", err
     }
 
-    return baseURL + id, nil
+    return baseURL + "/" + id, nil
 }
 
 // GetOriginalURL получает оригинальный URL по ID
