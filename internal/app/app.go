@@ -1,26 +1,26 @@
 package app
 
 import (
-    "linkshrink/internal/controller"
-    "linkshrink/internal/repository"
-    "linkshrink/internal/service"
-    "linkshrink/internal/handlers"
-    "linkshrink/internal/config"
-		"log"
+	"linkshrink/internal/config"
+	"linkshrink/internal/controller"
+	"linkshrink/internal/handlers"
+	"linkshrink/internal/repository"
+	"linkshrink/internal/service"
+	"log"
 )
 
 func Run() error {
-		cfg, err := config.InitConfig()
-		if err != nil {
-				log.Fatalf("Error initializing config: %v", err)
-		}
-	
-    // Создаем экземпляр репозитория для хранения URL
-    urlRepo := repository.NewStore()
+	cfg, err := config.InitConfig()
+	if err != nil {
+		log.Fatalf("Error initializing config: %v", err)
+	}
 
-    urlService := service.NewURLService(urlRepo)
+	// Создаем экземпляр репозитория для хранения URL
+	urlRepo := repository.NewStore()
 
-    urlController := controller.NewURLController(cfg, urlService)
+	urlService := service.NewURLService(urlRepo)
 
-    return handlers.StartServer(cfg, urlController)
+	urlController := controller.NewURLController(cfg, urlService)
+
+	return handlers.StartServer(cfg, urlController)
 }

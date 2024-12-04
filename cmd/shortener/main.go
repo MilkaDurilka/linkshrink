@@ -1,12 +1,12 @@
 package main
 
 import (
-    "log"
-    "linkshrink/internal/app"
+	"linkshrink/internal/app"
+	"log"
 )
 
 func main() {
-    if err := app.Run(); err != nil {
-        log.Fatalf("Error starting server: %v", err)
-    }
+	if err := app.Run(); err != nil {
+		log.Fatalf("Error starting server: %v", err)
+	}
 }

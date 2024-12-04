@@ -39,17 +39,17 @@ var cfg = config.Config{
 
 func TestShortenURL(t *testing.T) {
 	tests := []struct {
-		name           string
-		body           string
-		mockShorten    func(m *MockURLService)
-		expectedCode   int
-		expectedBody   string
+		name         string
+		body         string
+		mockShorten  func(m *MockURLService)
+		expectedCode int
+		expectedBody string
 	}{
 		{
-			name:         "Valid URL",
-			body:         "http://example.com",
+			name: "Valid URL",
+			body: "http://example.com",
 			mockShorten: func(m *MockURLService) {
-				m.On("Shorten", "BaseURL","http://example.com").Return("short.ly/abc123", nil)
+				m.On("Shorten", "BaseURL", "http://example.com").Return("short.ly/abc123", nil)
 			},
 			expectedCode: http.StatusCreated,
 			expectedBody: "short.ly/abc123",
@@ -151,8 +151,7 @@ func TestRedirectURL(t *testing.T) {
 			}
 			controller := NewURLController(&cfg, mockService)
 			r := mux.NewRouter()
-	    r.HandleFunc("/{id}", controller.RedirectURL)
-
+			r.HandleFunc("/{id}", controller.RedirectURL)
 
 			req := httptest.NewRequest("GET", "/"+tt.id, nil)
 			rr := httptest.NewRecorder()
@@ -160,7 +159,7 @@ func TestRedirectURL(t *testing.T) {
 			r.ServeHTTP(rr, req)
 
 			res := rr.Result()
-			
+
 			err := res.Body.Close()
 			require.NoError(t, err)
 
