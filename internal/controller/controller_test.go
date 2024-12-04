@@ -17,7 +17,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// MockURLService - мок-сервис для тестирования с использованием testify
+// MockURLService - мок-сервис для тестирования с использованием testify.
 type MockURLService struct {
 	mock.Mock
 }
@@ -153,7 +153,7 @@ func TestRedirectURL(t *testing.T) {
 			r := mux.NewRouter()
 			r.HandleFunc("/{id}", controller.RedirectURL)
 
-			req := httptest.NewRequest("GET", "/"+tt.id, nil)
+			req := httptest.NewRequest("GET", "/"+tt.id, http.NoBody)
 			rr := httptest.NewRecorder()
 
 			r.ServeHTTP(rr, req)

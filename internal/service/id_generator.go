@@ -7,7 +7,7 @@ import (
 	"time"
 )
 
-// IDGenerator - генератор уникальных идентификаторов
+// IDGenerator - генератор уникальных идентификаторов.
 type IDGenerator struct {
 	mu      sync.Mutex
 	randGen *rand.Rand

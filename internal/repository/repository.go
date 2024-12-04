@@ -15,12 +15,12 @@ type URLRepository struct {
 	mu    sync.RWMutex      // Мьютекс для обеспечения потокобезопасности
 }
 
-// NewStore создает новый экземпляр URLRepository
+// NewStore создает новый экземпляр URLRepository.
 func NewStore() *URLRepository {
 	return &URLRepository{store: make(map[string]string)}
 }
 
-// Save сохраняет оригинальный URL по ID
+// Save сохраняет оригинальный URL по ID.
 func (r *URLRepository) Save(id, originalURL string) error {
 	r.mu.Lock()         // Блокируем мьютекс для записи
 	defer r.mu.Unlock() // Разблокируем мьютекс после завершения работы
@@ -29,7 +29,7 @@ func (r *URLRepository) Save(id, originalURL string) error {
 	return nil
 }
 
-// Find ищет оригинальный URL по ID
+// Find ищет оригинальный URL по ID.
 func (r *URLRepository) Find(id string) (string, error) {
 	r.mu.RLock()         // Блокируем мьютекс для чтения
 	defer r.mu.RUnlock() // Разблокируем мьютекс после завершения работы

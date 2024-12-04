@@ -3,13 +3,14 @@ package service_test
 import (
 	"testing"
 
+	"linkshrink/internal/service"
+
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
-	"linkshrink/internal/service"
 )
 
-// MockRepository - это мок для репозитория URL
+// MockRepository - это мок для репозитория URL.
 type MockRepository struct {
 	mock.Mock
 }
@@ -24,7 +25,7 @@ func (m *MockRepository) Find(id string) (string, error) {
 	return args.String(0), args.Error(1)
 }
 
-// TestURLService_Shortcut тестирует метод Shorten
+// TestURLService_Shortcut тестирует метод Shorten.
 func TestURLService_Shortcut(t *testing.T) {
 	mockRepo := new(MockRepository)
 	service := service.NewURLService(mockRepo)
@@ -40,7 +41,7 @@ func TestURLService_Shortcut(t *testing.T) {
 	mockRepo.AssertExpectations(t)
 }
 
-// TestURLService_Shortcut_InvalidURL тестирует метод Shorten с недопустимым URL
+// TestURLService_Shortcut_InvalidURL тестирует метод Shorten с недопустимым URL.
 func TestURLService_Shortcut_InvalidURL(t *testing.T) {
 	mockRepo := new(MockRepository)
 	srv := service.NewURLService(mockRepo)
@@ -51,7 +52,7 @@ func TestURLService_Shortcut_InvalidURL(t *testing.T) {
 	assert.Empty(t, shortenedURL)
 }
 
-// TestURLService_GetOriginalURL тестирует метод GetOriginalURL
+// TestURLService_GetOriginalURL тестирует метод GetOriginalURL.
 func TestURLService_GetOriginalURL(t *testing.T) {
 	mockRepo := new(MockRepository)
 	srv := service.NewURLService(mockRepo)
@@ -67,7 +68,7 @@ func TestURLService_GetOriginalURL(t *testing.T) {
 	mockRepo.AssertExpectations(t)
 }
 
-// TestURLService_GetOriginalURL_NotFound тестирует метод GetOriginalURL с несуществующим ID
+// TestURLService_GetOriginalURL_NotFound тестирует метод GetOriginalURL с несуществующим ID.
 func TestURLService_GetOriginalURL_NotFound(t *testing.T) {
 	mockRepo := new(MockRepository)
 	srv := service.NewURLService(mockRepo)

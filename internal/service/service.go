@@ -10,7 +10,7 @@ var (
 	ErrURLNotFound = errors.New("URL not found")
 )
 
-// Определите интерфейс URLService
+// Определите интерфейс URLService.
 type IURLService interface {
 	Shorten(baseURL string, url string) (string, error)
 	GetOriginalURL(id string) (string, error)
@@ -28,7 +28,7 @@ func NewURLService(repo repository.IURLRepository) *URLService {
 	}
 }
 
-// Shorten сокращает оригинальный URL
+// Shorten сокращает оригинальный URL.
 func (s *URLService) Shorten(baseURL string, originalURL string) (string, error) {
 	if originalURL == "" {
 		return "", ErrInvalidURL
@@ -43,7 +43,7 @@ func (s *URLService) Shorten(baseURL string, originalURL string) (string, error)
 	return baseURL + "/" + id, nil
 }
 
-// GetOriginalURL получает оригинальный URL по ID
+// GetOriginalURL получает оригинальный URL по ID.
 func (s *URLService) GetOriginalURL(id string) (string, error) {
 	originalURL, err := s.repo.Find(id)
 	if err != nil {

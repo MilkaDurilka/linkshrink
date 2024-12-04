@@ -1,11 +1,12 @@
 package service_test
 
 import (
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
 	"linkshrink/internal/service"
 	"sync"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestIDGenerator_GenerateID(t *testing.T) {

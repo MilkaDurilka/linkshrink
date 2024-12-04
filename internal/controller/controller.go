@@ -20,12 +20,12 @@ type URLController struct {
 	cfg     *config.Config
 }
 
-// NewURLController создает новый экземпляр URLController
+// NewURLController создает новый экземпляр URLController.
 func NewURLController(cfg *config.Config, service service.IURLService) *URLController {
 	return &URLController{service: service, cfg: cfg} // Возвращаем новый контроллер с заданным сервисом
 }
 
-// ShortenURL обрабатывает запрос на сокращение URL
+// ShortenURL обрабатывает запрос на сокращение URL.
 func (c *URLController) ShortenURL(w http.ResponseWriter, r *http.Request) {
 	url, err := io.ReadAll(r.Body)
 	if err != nil || len(url) == 0 {
@@ -50,7 +50,7 @@ func (c *URLController) ShortenURL(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte(shortURL))
 }
 
-// RedirectURL обрабатывает запрос на перенаправление по ID
+// RedirectURL обрабатывает запрос на перенаправление по ID.
 func (c *URLController) RedirectURL(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r) // Получаем переменные маршрута
 	id := vars["id"]    // Извлекаем ID из переменных маршрута
