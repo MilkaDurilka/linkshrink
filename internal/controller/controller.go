@@ -48,6 +48,7 @@ func (c *URLController) ShortenURL(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		log.Println("Error shortening URL: %w", err)
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
 

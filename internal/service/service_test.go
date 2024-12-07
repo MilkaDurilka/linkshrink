@@ -1,6 +1,7 @@
 package service_test
 
 import (
+	"errors"
 	"fmt"
 	"log"
 	"testing"
@@ -55,7 +56,7 @@ func TestURLService_Shortcut_InvalidURL(t *testing.T) {
 	baseURL := "http://localhost:8080/"
 
 	shortenedURL, err := srv.Shorten(baseURL, "")
-	assert.Equal(t, service.ErrInvalidURL, err)
+	assert.True(t, errors.Is(err, service.ErrInvalidURL), "expected ErrInvalidURL")
 	assert.Empty(t, shortenedURL)
 }
 
@@ -85,7 +86,7 @@ func TestURLService_GetOriginalURL_NotFound(t *testing.T) {
 
 	result, err := srv.GetOriginalURL(id)
 
-	assert.Equal(t, service.ErrURLNotFound, err)
+	assert.True(t, errors.Is(err, service.ErrURLNotFound), "expected ErrURLNotFound")
 	assert.Empty(t, result)
 	mockRepo.AssertExpectations(t)
 }

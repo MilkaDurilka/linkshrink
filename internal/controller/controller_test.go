@@ -76,7 +76,7 @@ func TestShortenURL(t *testing.T) {
 				m.On("Shorten", "BaseURL", "http://example.com").Return("", errors.New("some error"))
 			},
 			expectedCode: http.StatusInternalServerError,
-			expectedBody: "Error shortening URL\n",
+			expectedBody: "Internal server error\n",
 		},
 	}
 
