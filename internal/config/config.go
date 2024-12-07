@@ -18,11 +18,8 @@ func InitConfig() (*Config, error) {
 
 	flag.Parse()
 
-	addressEnv := os.Getenv("SERVER_ADDRESS")
-	baseURLEnv := os.Getenv("BASE_URL")
-
-	address := getValue(addressEnv, addressFlag)
-	baseURL := getValue(baseURLEnv, baseURLFlag)
+	var address = getValue("SERVER_ADDRESS", addressFlag)
+	var baseURL = getValue("BASE_URL", baseURLFlag)
 
 	return &Config{
 		Address: address,
@@ -30,8 +27,9 @@ func InitConfig() (*Config, error) {
 	}, nil
 }
 
-func getValue(envVar string, flagValue *string) string {
-	if envVar != "" {
+func getValue(envVarKey string, flagValue *string) string {
+	envVar, exists := os.LookupEnv(envVarKey)
+	if exists {
 		return envVar
 	}
 

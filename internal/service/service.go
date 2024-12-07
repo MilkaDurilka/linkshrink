@@ -32,7 +32,7 @@ func NewURLService(repo repository.IURLRepository) *URLService {
 // Shorten сокращает оригинальный URL.
 func (s *URLService) Shorten(baseURL string, originalURL string) (string, error) {
 	if originalURL == "" {
-		return "", ErrInvalidURL
+		return "", fmt.Errorf("url is empty: %w ", ErrInvalidURL)
 	}
 
 	// Генерируем уникальный идентификатор
@@ -50,7 +50,7 @@ func (s *URLService) Shorten(baseURL string, originalURL string) (string, error)
 func (s *URLService) GetOriginalURL(id string) (string, error) {
 	originalURL, err := s.repo.Find(id)
 	if err != nil {
-		return "", ErrURLNotFound
+		return "", fmt.Errorf("%s not found  %w ", originalURL, ErrURLNotFound)
 	}
 	return originalURL, nil
 }

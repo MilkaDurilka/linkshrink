@@ -13,7 +13,8 @@ import (
 func Run() error {
 	cfg, err := config.InitConfig()
 	if err != nil {
-		log.Fatalf("Error initializing config: %v", err)
+		log.Println("Error initializing config", err)
+		return fmt.Errorf("failed to initialize config: %w", err)
 	}
 
 	// Создаем экземпляр репозитория для хранения URL

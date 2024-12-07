@@ -12,12 +12,12 @@ type IURLRepository interface {
 
 type URLRepository struct {
 	store map[string]string // Хранилище для хранения пар ID и оригинальных URL
-	mu    sync.RWMutex      // Мьютекс для обеспечения потокобезопасности
+	mu    *sync.RWMutex     // Мьютекс для обеспечения потокобезопасности
 }
 
 // NewStore создает новый экземпляр URLRepository.
 func NewStore() *URLRepository {
-	return &URLRepository{store: make(map[string]string)}
+	return &URLRepository{store: make(map[string]string), mu: &sync.RWMutex{}}
 }
 
 // Save сохраняет оригинальный URL по ID.
