@@ -1,6 +1,7 @@
 package app
 
 import (
+	"fmt"
 	"linkshrink/internal/config"
 	"linkshrink/internal/controller"
 	"linkshrink/internal/handlers"
@@ -22,5 +23,12 @@ func Run() error {
 
 	urlController := controller.NewURLController(cfg, urlService)
 
-	return handlers.StartServer(cfg, urlController)
+	err = handlers.StartServer(cfg, urlController)
+
+	if err != nil {
+		log.Println("Error on start serve", err)
+		return fmt.Errorf("failed to start serve: %w", err)
+	}
+
+	return nil
 }

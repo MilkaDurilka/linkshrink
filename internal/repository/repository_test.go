@@ -5,7 +5,8 @@ import (
 	"sync"
 	"testing"
 
-	"linkshrink/internal/repository" // Убедитесь, что путь к вашему пакету правильный
+	"linkshrink/internal/repository"
+	"linkshrink/internal/utils"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -49,7 +50,7 @@ func TestURLRepository_ConcurrentAccess(t *testing.T) {
 	var wg sync.WaitGroup
 
 	// Запускаем несколько горутин для сохранения URL
-	for i := 0; i < 100; i++ {
+	for i := range utils.Intrange(0, 100) {
 		wg.Add(1)
 		go func(id int) {
 			defer wg.Done()
@@ -62,7 +63,7 @@ func TestURLRepository_ConcurrentAccess(t *testing.T) {
 	wg.Wait()
 
 	// Проверяем, что все URL были сохранены
-	for i := 0; i < 100; i++ {
+	for i := range utils.Intrange(0, 100) {
 		originalURL, err := repo.Find(fmt.Sprintf("id%d", i))
 		require.NoError(t, err)
 		assert.Equal(t, fmt.Sprintf("http://url%d.com", i), originalURL)

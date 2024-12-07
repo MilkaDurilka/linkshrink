@@ -1,16 +1,16 @@
 package service
 
 import (
-	"fmt"
 	"math/rand"
+	"strconv"
 	"sync"
 	"time"
 )
 
 // IDGenerator - генератор уникальных идентификаторов.
 type IDGenerator struct {
-	mu      sync.Mutex
 	randGen *rand.Rand
+	mu      sync.Mutex
 }
 
 func NewIDGenerator() *IDGenerator {
@@ -23,5 +23,5 @@ func (g *IDGenerator) GenerateID() string {
 	g.mu.Lock()         // Блокируем доступ к генератору
 	defer g.mu.Unlock() // Освобождаем блокировку после выполнения
 
-	return fmt.Sprintf("%d", g.randGen.Int63())
+	return strconv.FormatInt(g.randGen.Int63(), 10)
 }

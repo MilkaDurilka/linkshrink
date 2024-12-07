@@ -1,6 +1,7 @@
 package handlers
 
 import (
+	"fmt"
 	"linkshrink/internal/config"
 	"linkshrink/internal/controller"
 	"log"
@@ -17,5 +18,12 @@ func StartServer(cfg *config.Config, urlController controller.IURLController) er
 
 	log.Println("Starting server on: " + cfg.Address)
 
-	return http.ListenAndServe(cfg.Address, r)
+	err := http.ListenAndServe(cfg.Address, r)
+
+	if err != nil {
+		log.Println("Error on serve: ", err)
+		return fmt.Errorf("failed to serve: %w", err)
+	}
+
+	return nil
 }

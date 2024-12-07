@@ -1,6 +1,8 @@
 package service_test
 
 import (
+	"fmt"
+	"log"
 	"testing"
 
 	"linkshrink/internal/service"
@@ -17,7 +19,12 @@ type MockRepository struct {
 
 func (m *MockRepository) Save(id, originalURL string) error {
 	args := m.Called(id, originalURL)
-	return args.Error(0)
+	err := args.Error(0) // Вызов метода, который возвращает ошибку
+	if err != nil {
+		log.Println("Error on save:", err)
+		return fmt.Errorf("failed to save: %w", err)
+	}
+	return nil
 }
 
 func (m *MockRepository) Find(id string) (string, error) {
@@ -28,13 +35,13 @@ func (m *MockRepository) Find(id string) (string, error) {
 // TestURLService_Shortcut тестирует метод Shorten.
 func TestURLService_Shortcut(t *testing.T) {
 	mockRepo := new(MockRepository)
-	service := service.NewURLService(mockRepo)
+	srv := service.NewURLService(mockRepo)
 
 	originalURL := "http://example.com"
 	baseURL := "http://localhost:8080/"
 	mockRepo.On("Save", mock.Anything, originalURL).Return(nil)
 
-	shortenedURL, err := service.Shorten(baseURL, originalURL)
+	shortenedURL, err := srv.Shorten(baseURL, originalURL)
 
 	require.NoError(t, err)
 	assert.Contains(t, shortenedURL, "http://localhost:8080/") // Проверяем, что URL содержит базовый адрес

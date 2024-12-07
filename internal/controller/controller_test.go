@@ -89,7 +89,7 @@ func TestShortenURL(t *testing.T) {
 
 			controller := NewURLController(&cfg, mockService)
 
-			req := httptest.NewRequest("POST", "/shorten", bytes.NewBufferString(tt.body))
+			req := httptest.NewRequest(http.MethodPost, "/shorten", bytes.NewBufferString(tt.body))
 			rr := httptest.NewRecorder()
 
 			controller.ShortenURL(rr, req)
@@ -153,7 +153,7 @@ func TestRedirectURL(t *testing.T) {
 			r := mux.NewRouter()
 			r.HandleFunc("/{id}", controller.RedirectURL)
 
-			req := httptest.NewRequest("GET", "/"+tt.id, http.NoBody)
+			req := httptest.NewRequest(http.MethodGet, "/"+tt.id, http.NoBody)
 			rr := httptest.NewRecorder()
 
 			r.ServeHTTP(rr, req)

@@ -2,7 +2,9 @@ package service
 
 import (
 	"errors"
+	"fmt"
 	"linkshrink/internal/repository"
+	"log"
 )
 
 var (
@@ -10,7 +12,6 @@ var (
 	ErrURLNotFound = errors.New("URL not found")
 )
 
-// Определите интерфейс URLService.
 type IURLService interface {
 	Shorten(baseURL string, url string) (string, error)
 	GetOriginalURL(id string) (string, error)
@@ -36,8 +37,10 @@ func (s *URLService) Shorten(baseURL string, originalURL string) (string, error)
 
 	// Генерируем уникальный идентификатор
 	id := s.idGenerator.GenerateID()
+
 	if err := s.repo.Save(id, originalURL); err != nil {
-		return "", err
+		log.Println("Error saving URL:", err)
+		return "", fmt.Errorf("failed to save URL with id %s: %w", id, err)
 	}
 
 	return baseURL + "/" + id, nil

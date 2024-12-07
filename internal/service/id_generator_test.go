@@ -2,6 +2,7 @@ package service_test
 
 import (
 	"linkshrink/internal/service"
+	"linkshrink/internal/utils"
 	"sync"
 	"testing"
 
@@ -33,7 +34,7 @@ func TestIDGenerator_ConcurrentAccess(t *testing.T) {
 	mu := sync.Mutex{}                 // Мьютекс для защиты доступа к idSet
 
 	// Запускаем несколько горутин для генерации ID
-	for i := 0; i < 100; i++ {
+	for range utils.Intrange(0, 100) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()

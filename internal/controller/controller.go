@@ -5,6 +5,7 @@ import (
 	"io"
 	"linkshrink/internal/config"
 	"linkshrink/internal/service"
+	"log"
 	"net/http"
 
 	"github.com/gorilla/mux"
@@ -21,8 +22,8 @@ type URLController struct {
 }
 
 // NewURLController создает новый экземпляр URLController.
-func NewURLController(cfg *config.Config, service service.IURLService) *URLController {
-	return &URLController{service: service, cfg: cfg} // Возвращаем новый контроллер с заданным сервисом
+func NewURLController(cfg *config.Config, srv service.IURLService) *URLController {
+	return &URLController{service: srv, cfg: cfg} // Возвращаем новый контроллер с заданным сервисом
 }
 
 // ShortenURL обрабатывает запрос на сокращение URL.
@@ -32,7 +33,12 @@ func (c *URLController) ShortenURL(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Invalid URL", http.StatusBadRequest)
 		return
 	}
-	defer r.Body.Close() // Закрываем тело запроса после его чтения
+
+	defer func() {
+		if err := r.Body.Close(); err != nil {
+			log.Println("Error closing response body:", err)
+		}
+	}()
 
 	shortURL, err := c.service.Shorten(c.cfg.BaseURL, string(url))
 	if err != nil {
@@ -47,7 +53,17 @@ func (c *URLController) ShortenURL(w http.ResponseWriter, r *http.Request) {
 
 	w.WriteHeader(http.StatusCreated)
 	w.Header().Set("Content-Type", "text/plain")
-	w.Write([]byte(shortURL))
+	var data = []byte(shortURL)
+	n, err := w.Write(data)
+	if err != nil {
+		log.Println("Error writing to the response stream:", err)
+		return
+	}
+
+	if n != len(data) {
+		log.Println("Error writing to the response stream: не все данные записаны")
+		return
+	}
 }
 
 // RedirectURL обрабатывает запрос на перенаправление по ID.
@@ -62,7 +78,8 @@ func (c *URLController) RedirectURL(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, "URL not found", http.StatusBadRequest) // Если URL не найден, отправляем ответ 400 StatusBadRequest
 			return
 		}
-		http.Error(w, "Internal server error", http.StatusInternalServerError) // Если другая ошибка, отправляем 500 Internal Server Error
+		// Если другая ошибка, отправляем 500 Internal Server Error
+		http.Error(w, "Internal server error", http.StatusInternalServerError)
 		return
 	}
 
