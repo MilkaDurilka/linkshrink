@@ -18,14 +18,12 @@ type IURLService interface {
 }
 
 type URLService struct {
-	repo        repository.IURLRepository
-	idGenerator *IDGenerator
+	repo repository.IURLRepository
 }
 
 func NewURLService(repo repository.IURLRepository) *URLService {
 	return &URLService{ // Возвращаем новый сервис с заданным репозиторием
-		repo:        repo,
-		idGenerator: NewIDGenerator(),
+		repo: repo,
 	}
 }
 
@@ -35,10 +33,9 @@ func (s *URLService) Shorten(baseURL string, originalURL string) (string, error)
 		return "", fmt.Errorf("url is empty: %w ", ErrInvalidURL)
 	}
 
-	// Генерируем уникальный идентификатор
-	id := s.idGenerator.GenerateID()
+	id, err := s.repo.Save(originalURL)
 
-	if err := s.repo.Save(id, originalURL); err != nil {
+	if err != nil {
 		log.Println("Error saving URL:", err)
 		return "", fmt.Errorf("failed to save URL with id %s: %w", id, err)
 	}

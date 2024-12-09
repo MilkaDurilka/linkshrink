@@ -69,10 +69,10 @@ func (c *URLController) ShortenURL(w http.ResponseWriter, r *http.Request) {
 
 // RedirectURL обрабатывает запрос на перенаправление по ID.
 func (c *URLController) RedirectURL(w http.ResponseWriter, r *http.Request) {
-	vars := mux.Vars(r)      // Получаем переменные маршрута
-	id, exists := vars["id"] // Извлекаем ID из переменных маршрута
+	vars := mux.Vars(r)  // Получаем переменные маршрута
+	id, ok := vars["id"] // Извлекаем ID из переменных маршрута
 
-	if !exists {
+	if !ok {
 		log.Println("Key 'id' not found in route variables")
 		http.Error(w, "ID not found", http.StatusBadRequest)
 		return

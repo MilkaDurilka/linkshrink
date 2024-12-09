@@ -2,8 +2,6 @@ package service_test
 
 import (
 	"errors"
-	"fmt"
-	"log"
 	"testing"
 
 	"linkshrink/internal/service"
@@ -18,14 +16,9 @@ type MockRepository struct {
 	mock.Mock
 }
 
-func (m *MockRepository) Save(id, originalURL string) error {
-	args := m.Called(id, originalURL)
-	err := args.Error(0) // Вызов метода, который возвращает ошибку
-	if err != nil {
-		log.Println("Error on save:", err)
-		return fmt.Errorf("failed to save: %w", err)
-	}
-	return nil
+func (m *MockRepository) Save(originalURL string) (string, error) {
+	args := m.Called(originalURL)
+	return args.String(0), args.Error(1)
 }
 
 func (m *MockRepository) Find(id string) (string, error) {
@@ -40,7 +33,7 @@ func TestURLService_Shortcut(t *testing.T) {
 
 	originalURL := "http://example.com"
 	baseURL := "http://localhost:8080/"
-	mockRepo.On("Save", mock.Anything, originalURL).Return(nil)
+	mockRepo.On("Save", originalURL).Return("id", nil)
 
 	shortenedURL, err := srv.Shorten(baseURL, originalURL)
 

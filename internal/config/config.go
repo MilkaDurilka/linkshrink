@@ -28,8 +28,8 @@ func InitConfig() (*Config, error) {
 }
 
 func getValue(envVarKey string, flagValue *string) string {
-	envVar, exists := os.LookupEnv(envVarKey)
-	if exists {
+	envVar, ok := os.LookupEnv(envVarKey)
+	if ok {
 		return envVar
 	}
 

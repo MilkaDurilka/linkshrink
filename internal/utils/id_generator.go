@@ -1,11 +1,10 @@
-package service
+package utils
 
 import (
 	"math/rand"
+	"strconv"
 	"sync"
 	"time"
-
-	"github.com/google/uuid"
 )
 
 // IDGenerator - генератор уникальных идентификаторов.
@@ -24,5 +23,5 @@ func (g *IDGenerator) GenerateID() string {
 	g.mu.Lock()         // Блокируем доступ к генератору
 	defer g.mu.Unlock() // Освобождаем блокировку после выполнения
 
-	return uuid.New().String()
+	return strconv.FormatInt(g.randGen.Int63(), 10)
 }
