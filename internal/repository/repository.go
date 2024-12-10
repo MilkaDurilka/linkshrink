@@ -6,7 +6,8 @@ import (
 )
 
 var (
-	ErrURLNotFound = errors.New("URL not found")
+	ErrURLNotFound     = errors.New("URL not found")
+	ErrIDAlreadyExists = errors.New("ID already exists")
 )
 
 type IURLRepository interface {
@@ -32,8 +33,13 @@ func (r *URLRepository) Save(id string, originalURL string) error {
 	r.mu.Lock()         // Блокируем мьютекс
 	defer r.mu.Unlock() // Разблокируем мьютекс после завершения работы
 
-	r.store[id] = originalURL
-	return nil
+	_, ok := r.store[id]
+	if !ok {
+		r.store[id] = originalURL
+		return nil
+	}
+
+	return ErrIDAlreadyExists
 }
 
 // Find ищет оригинальный URL по ID.

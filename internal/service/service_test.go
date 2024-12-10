@@ -42,7 +42,6 @@ func TestURLService_Shortcut(t *testing.T) {
 	originalURL := "http://example.com"
 	baseURL := "http://localhost:8080/"
 	mockRepo.On("Save", mock.Anything, originalURL).Return(nil)
-	mockRepo.On("Find", mock.Anything).Return("", repository.ErrURLNotFound)
 
 	shortenedURL, err := srv.Shorten(baseURL, originalURL)
 
@@ -58,8 +57,7 @@ func TestURLService_Shortcut_InternalServer(t *testing.T) {
 
 	originalURL := "http://example.com"
 	baseURL := "http://localhost:8080/"
-	mockRepo.On("Save", mock.Anything, originalURL).Return(nil)
-	mockRepo.On("Find", mock.Anything).Return("123", nil)
+	mockRepo.On("Save", mock.Anything, originalURL).Return(repository.ErrIDAlreadyExists)
 
 	shortenedURL, err := srv.Shorten(baseURL, originalURL)
 

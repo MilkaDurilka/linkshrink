@@ -4,7 +4,6 @@ import (
 	"errors"
 	"fmt"
 	"linkshrink/internal/repository"
-	"log"
 )
 
 var (
@@ -37,36 +36,19 @@ func (s *URLService) Shorten(baseURL string, originalURL string) (string, error)
 	}
 
 	const maxAttempts = 10 // Максимальное количество попыток
-	var id string
 	attempts := 0
 
 	for attempts < maxAttempts {
-		genID := s.idGenerator.GenerateID()
-		_, err := s.repo.Find(genID)
+		id := s.idGenerator.GenerateID()
+		err := s.repo.Save(id, originalURL)
 
-		if errors.Is(err, repository.ErrURLNotFound) {
-			id = genID
-			break
-		}
-
-		if err != nil {
-			log.Println("Error finding id:", err)
-			return "", fmt.Errorf("failed to find id %s: %w", id, err)
+		if err == nil {
+			return baseURL + "/" + id, nil
 		}
 		attempts++
 	}
 
-	if id == "" {
-		log.Printf("Number of attempts exceeded: %s", originalURL)
-		return "", ErrInternalServer
-	}
-
-	if err := s.repo.Save(id, originalURL); err != nil {
-		log.Println("Error saving URL:", err)
-		return "", fmt.Errorf("failed to save URL with id %s: %w", id, err)
-	}
-
-	return baseURL + "/" + id, nil
+	return "", fmt.Errorf("%w: number of attempts exceeded: %s", ErrInternalServer, originalURL)
 }
 
 // GetOriginalURL получает оригинальный URL по ID.
