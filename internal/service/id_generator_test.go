@@ -1,6 +1,7 @@
-package utils_test
+package service_test
 
 import (
+	"linkshrink/internal/service"
 	"linkshrink/internal/utils"
 	"sync"
 	"testing"
@@ -10,7 +11,7 @@ import (
 )
 
 func TestIDGenerator_GenerateID(t *testing.T) {
-	generator := utils.NewIDGenerator()
+	generator := service.NewIDGenerator()
 
 	// Генерируем несколько ID
 	id1 := generator.GenerateID()
@@ -25,7 +26,7 @@ func TestIDGenerator_GenerateID(t *testing.T) {
 }
 
 func TestIDGenerator_ConcurrentAccess(t *testing.T) {
-	generator := utils.NewIDGenerator()
+	generator := service.NewIDGenerator()
 
 	// Используем WaitGroup для ожидания завершения всех горутин
 	var wg sync.WaitGroup

@@ -2,12 +2,11 @@ package repository
 
 import (
 	"errors"
-	"linkshrink/internal/utils"
 	"sync"
 )
 
 type IURLRepository interface {
-	Save(originalURL string) (string, error)
+	Save(id string, originalURL string) error
 	Find(id string) (string, error)
 }
 
@@ -25,34 +24,22 @@ func NewStore() *URLRepository {
 }
 
 // Save сохраняет оригинальный URL по ID.
-func (r *URLRepository) Save(originalURL string) (string, error) {
-	r.mu.Lock()         // Блокируем мьютекс для записи
+func (r *URLRepository) Save(id string, originalURL string) error {
+	r.mu.Lock()         // Блокируем мьютекс
 	defer r.mu.Unlock() // Разблокируем мьютекс после завершения работы
 
-	const maxAttempts = 10 // Максимальное количество попыток
-	var id string
-	attempts := 0
-
-	for attempts < maxAttempts {
-		id = utils.NewIDGenerator().GenerateID()
-		if _, ok := r.store[id]; !ok {
-			r.store[id] = originalURL
-			return id, nil
-		}
-		attempts++
-	}
-
-	return "", errors.New("internal Server Error")
+	r.store[id] = originalURL
+	return nil
 }
 
 // Find ищет оригинальный URL по ID.
 func (r *URLRepository) Find(id string) (string, error) {
-	r.mu.Lock()         // Блокируем мьютекс для чтения
-	defer r.mu.Unlock() // Разблокируем мьютекс после завершения работы
+	r.mu.Lock()
+	defer r.mu.Unlock()
 
 	originalURL, ok := r.store[id] // Проверяем, существует ли ID в хранилище
 	if !ok {
-		return "", errors.New("URL not found") // Если не найден, возвращаем ошибку
+		return "", errors.New("URL not found")
 	}
 	return originalURL, nil
 }
