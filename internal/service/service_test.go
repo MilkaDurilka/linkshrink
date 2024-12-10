@@ -6,6 +6,7 @@ import (
 	"log"
 	"testing"
 
+	"linkshrink/internal/repository"
 	"linkshrink/internal/service"
 
 	"github.com/stretchr/testify/assert"
@@ -41,7 +42,7 @@ func TestURLService_Shortcut(t *testing.T) {
 	originalURL := "http://example.com"
 	baseURL := "http://localhost:8080/"
 	mockRepo.On("Save", mock.Anything, originalURL).Return(nil)
-	mockRepo.On("Find", mock.Anything).Return("", nil)
+	mockRepo.On("Find", mock.Anything).Return("", repository.ErrURLNotFound)
 
 	shortenedURL, err := srv.Shorten(baseURL, originalURL)
 

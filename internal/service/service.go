@@ -42,16 +42,16 @@ func (s *URLService) Shorten(baseURL string, originalURL string) (string, error)
 
 	for attempts < maxAttempts {
 		genID := s.idGenerator.GenerateID()
-		res, err := s.repo.Find(genID)
+		_, err := s.repo.Find(genID)
+
+		if errors.Is(err, repository.ErrURLNotFound) {
+			id = genID
+			break
+		}
 
 		if err != nil {
 			log.Println("Error finding id:", err)
 			return "", fmt.Errorf("failed to find id %s: %w", id, err)
-		}
-
-		if res == "" {
-			id = genID
-			break
 		}
 		attempts++
 	}

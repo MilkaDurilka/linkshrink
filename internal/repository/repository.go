@@ -5,6 +5,10 @@ import (
 	"sync"
 )
 
+var (
+	ErrURLNotFound = errors.New("URL not found")
+)
+
 type IURLRepository interface {
 	Save(id string, originalURL string) error
 	Find(id string) (string, error)
@@ -39,7 +43,7 @@ func (r *URLRepository) Find(id string) (string, error) {
 
 	originalURL, ok := r.store[id] // Проверяем, существует ли ID в хранилище
 	if !ok {
-		return "", errors.New("URL not found")
+		return "", ErrURLNotFound
 	}
 	return originalURL, nil
 }
