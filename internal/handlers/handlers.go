@@ -30,6 +30,7 @@ func StartServer(cfg *config.Config, urlController controller.IURLController) er
 	r.Use(middleware.LoggingMiddleware(logger))
 
 	r.HandleFunc("/", urlController.ShortenURL).Methods("POST")
+	r.HandleFunc("/api/shorten", urlController.ShortenURLJSON).Methods("POST")
 	r.HandleFunc("/{id}", urlController.RedirectURL).Methods("GET")
 
 	log.Println("Starting server on: " + cfg.Address)

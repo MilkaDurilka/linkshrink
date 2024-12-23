@@ -2,6 +2,7 @@ package controller
 
 import (
 	"bytes"
+	"encoding/json"
 	"errors"
 	"io"
 	"net/http"
@@ -102,6 +103,86 @@ func TestShortenURL(t *testing.T) {
 			require.NoError(t, err)
 
 			assert.Equal(t, tt.expectedBody, string(body))
+
+			mockService.AssertExpectations(t)
+		})
+	}
+}
+
+func TestShortenURLJSON(t *testing.T) {
+	tests := []struct {
+		name          string
+		body          string
+		mockShorten   func(m *MockURLService)
+		expectedCode  int
+		expectedBody  string
+		expectedError string
+	}{
+		{
+			name: "Valid URL",
+			body: "http://example.com",
+			mockShorten: func(m *MockURLService) {
+				m.On("Shorten", "BaseURL", "http://example.com").Return("short.ly/abc123", nil)
+			},
+			expectedCode: http.StatusCreated,
+			expectedBody: "short.ly/abc123",
+		},
+		{
+			name:          "Empty URL",
+			body:          "",
+			expectedCode:  http.StatusBadRequest,
+			expectedError: "Invalid URL\n",
+		},
+		{
+			name: "Invalid URL",
+			body: "http://invalid-url",
+			mockShorten: func(m *MockURLService) {
+				m.On("Shorten", "BaseURL", "http://invalid-url").Return("", service.ErrInvalidURL)
+			},
+			expectedCode:  http.StatusBadRequest,
+			expectedError: "Invalid URL\n",
+		},
+		{
+			name: "Internal Server Error",
+			body: "http://example.com",
+			mockShorten: func(m *MockURLService) {
+				m.On("Shorten", "BaseURL", "http://example.com").Return("", errors.New("some error"))
+			},
+			expectedCode:  http.StatusInternalServerError,
+			expectedError: "Internal server error\n",
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			mockService := new(MockURLService)
+			if tt.mockShorten != nil {
+				tt.mockShorten(mockService)
+			}
+
+			controller := NewURLController(&cfg, mockService)
+
+			requestBody, _ := json.Marshal(map[string]string{"url": tt.body})
+			req := httptest.NewRequest(http.MethodPost, "/shorten", bytes.NewBuffer(requestBody))
+			rr := httptest.NewRecorder()
+
+			controller.ShortenURLJSON(rr, req)
+
+			res := rr.Result()
+			assert.Equal(t, tt.expectedCode, res.StatusCode)
+
+			if tt.expectedError != "" {
+				body, _ := io.ReadAll(res.Body)
+				err := res.Body.Close()
+				require.NoError(t, err)
+
+				assert.Equal(t, tt.expectedError, string(body))
+			} else {
+				var response map[string]string
+				err := json.NewDecoder(rr.Body).Decode(&response)
+				require.NoError(t, err)
+				assert.Equal(t, tt.expectedBody, response["result"])
+			}
 
 			mockService.AssertExpectations(t)
 		})
