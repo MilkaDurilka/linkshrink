@@ -87,10 +87,14 @@ func gzipRequestMiddleware(next http.Handler) http.Handler {
 	})
 }
 
+const (
+	ContentTypeHeader = "Content-Type"
+)
+
 // Middleware для сжатия ответов.
 func gzipResponseMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Header.Get("Accept-Encoding") == "gzip" {
+		if r.Header.Get("Accept-Encoding") == "gzip" && (r.Header.Get(ContentTypeHeader) == "application/json" || r.Header.Get(ContentTypeHeader) == "text/html") {
 			var buf bytes.Buffer
 			gzipWriter := gzip.NewWriter(&buf)
 
@@ -106,7 +110,7 @@ func gzipResponseMiddleware(next http.Handler) http.Handler {
 			// gzipWriter.Close()
 
 			w.Header().Set("Content-Encoding", "gzip")
-			w.Header().Set("Content-Type", gzw.Header().Get("Content-Type"))
+			w.Header().Set(ContentTypeHeader, gzw.Header().Get(ContentTypeHeader))
 			w.WriteHeader(gzw.statusCode)
 			_, err := buf.WriteTo(w)
 			if err != nil {
