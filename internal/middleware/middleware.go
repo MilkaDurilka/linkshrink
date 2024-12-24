@@ -81,7 +81,15 @@ func gzipRequestMiddleware(next http.Handler) http.Handler {
 					http.Error(w, "Error closing reader:", http.StatusInternalServerError)
 				}
 			}()
-			r.Body = io.NopCloser(reader)
+
+			body, err := io.ReadAll(reader)
+			if err != nil {
+				http.Error(w, "Failed to read body", http.StatusBadRequest)
+				return
+			}
+
+			r.Body = io.NopCloser(bytes.NewBuffer(body))
+			r.Header.Set("Content-Encoding", "")
 		}
 		next.ServeHTTP(w, r)
 	})
