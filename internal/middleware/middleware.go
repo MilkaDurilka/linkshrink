@@ -14,8 +14,8 @@ import (
 
 func InitMiddlewares(logger *zap.Logger) func(http.Handler) http.Handler {
 	return chain(
-		// gzipRequestMiddleware,
-		gzipResponseMiddleware,
+		GzipRequestMiddleware,
+		// gzipResponseMiddleware,
 		loggingMiddleware(logger),
 	)
 }
@@ -99,8 +99,8 @@ const (
 	ContentTypeHeader = "Content-Type"
 )
 
-// Middleware для сжатия ответов.
-func gzipResponseMiddleware(next http.Handler) http.Handler {
+// GzipResponseMiddleware для сжатия ответов.
+func GzipResponseMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("Accept-Encoding") == "gzip" &&
 			(r.Header.Get(ContentTypeHeader) == "application/json" || r.Header.Get(ContentTypeHeader) == "text/html") {
