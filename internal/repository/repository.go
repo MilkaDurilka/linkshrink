@@ -82,12 +82,12 @@ func (r *URLRepository) SaveToFile() error {
 	// r.mu.Lock()
 	// defer r.mu.Unlock()
 
-	urls := make([]URLData, 0, 1000)
+	const initialCapacity = 1000
+	urls := make([]URLData, 0, initialCapacity)
 	for id, originalURL := range r.store {
 		urls = append(urls, URLData{
 			UUID:        id,
 			OriginalURL: originalURL,
-			ShortURL:    "", // Здесь можно добавить логику для генерации короткого URL
 		})
 	}
 
@@ -96,7 +96,11 @@ func (r *URLRepository) SaveToFile() error {
 		return errors.New("не удалось сериализовать данные: " + err.Error())
 	}
 
-	return os.WriteFile(r.filePath, data, 0o600)
+	const filePermission = 0o600 // Read and write for owner only
+	if err := os.WriteFile(r.filePath, data, filePermission); err != nil {
+		return errors.New("не удалось записать файл: " + err.Error())
+	}
+	return nil
 }
 
 // Save сохраняет оригинальный URL по ID.
