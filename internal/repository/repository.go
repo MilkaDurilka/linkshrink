@@ -1,7 +1,11 @@
 package repository
 
 import (
+	"encoding/json"
 	"errors"
+	"io"
+	"log"
+	"os"
 	"sync"
 )
 
@@ -10,22 +14,89 @@ var (
 	ErrIDAlreadyExists = errors.New("ID already exists")
 )
 
+type URLData struct {
+	UUID        string `json:"uuid"`
+	ShortURL    string `json:"short_url"`
+	OriginalURL string `json:"original_url"`
+}
+
 type IURLRepository interface {
 	Save(id string, originalURL string) error
 	Find(id string) (string, error)
+	LoadFromFile() error
+	SaveToFile() error
 }
 
 type URLRepository struct {
-	store map[string]string // Хранилище для хранения пар ID и оригинальных URL
-	mu    *sync.Mutex       // Мьютекс для обеспечения потокобезопасности
+	store    map[string]string // Хранилище для хранения пар ID и оригинальных URL
+	mu       *sync.Mutex       // Мьютекс для обеспечения потокобезопасности
+	filePath string
 }
 
 // NewStore создает новый экземпляр URLRepository.
-func NewStore() *URLRepository {
-	return &URLRepository{
-		store: make(map[string]string),
-		mu:    &sync.Mutex{},
+func NewStore(filePath string) *URLRepository {
+	repo := &URLRepository{
+		store:    make(map[string]string),
+		mu:       &sync.Mutex{},
+		filePath: filePath,
 	}
+
+	if err := repo.LoadFromFile(); err != nil {
+		log.Printf("Ошибка при загрузке из файла: %v", err)
+	}
+
+	return repo
+}
+
+// LoadFromFile загружает данные из файла в репозиторий.
+func (r *URLRepository) LoadFromFile() error {
+	file, err := os.Open(r.filePath)
+	if err != nil {
+		return errors.New("не удалось открыть файл: " + err.Error())
+	}
+	defer func() {
+		if closeErr := file.Close(); closeErr != nil {
+			log.Printf("Ошибка при закрытии файла: %v", closeErr)
+		}
+	}()
+
+	data, err := io.ReadAll(file)
+	if err != nil {
+		return errors.New("не удалось прочитать файл: " + err.Error())
+	}
+
+	var urls []URLData
+	if err := json.Unmarshal(data, &urls); err != nil {
+		return errors.New("не удалось декодировать файл: " + err.Error())
+	}
+
+	for _, url := range urls {
+		r.store[url.UUID] = url.OriginalURL
+	}
+
+	return nil
+}
+
+// SaveToFile сохраняет данные репозитория в файл.
+func (r *URLRepository) SaveToFile() error {
+	// r.mu.Lock()
+	// defer r.mu.Unlock()
+
+	urls := make([]URLData, 0, 1000)
+	for id, originalURL := range r.store {
+		urls = append(urls, URLData{
+			UUID:        id,
+			OriginalURL: originalURL,
+			ShortURL:    "", // Здесь можно добавить логику для генерации короткого URL
+		})
+	}
+
+	data, err := json.Marshal(urls)
+	if err != nil {
+		return errors.New("не удалось сериализовать данные: " + err.Error())
+	}
+
+	return os.WriteFile(r.filePath, data, 0o600)
 }
 
 // Save сохраняет оригинальный URL по ID.
@@ -36,6 +107,9 @@ func (r *URLRepository) Save(id string, originalURL string) error {
 	_, ok := r.store[id]
 	if !ok {
 		r.store[id] = originalURL
+		if err := r.SaveToFile(); err != nil {
+			return err
+		}
 		return nil
 	}
 
