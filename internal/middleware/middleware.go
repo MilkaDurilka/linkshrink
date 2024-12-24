@@ -14,7 +14,7 @@ import (
 
 func InitMiddlewares(logger *zap.Logger) func(http.Handler) http.Handler {
 	return chain(
-		gzipRequestMiddleware,
+		// gzipRequestMiddleware,
 		gzipResponseMiddleware,
 		loggingMiddleware(logger),
 	)
@@ -66,8 +66,8 @@ func (lrw *LoggingResponseWriter) Write(b []byte) (int, error) {
 	return n, nil
 }
 
-// Middleware для обработки входящих сжатых запросов.
-func gzipRequestMiddleware(next http.Handler) http.Handler {
+// GzipRequestMiddleware для обработки входящих сжатых запросов.
+func GzipRequestMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("Content-Encoding") == "gzip" {
 			reader, err := gzip.NewReader(r.Body)
