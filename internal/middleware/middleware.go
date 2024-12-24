@@ -94,7 +94,8 @@ const (
 // Middleware для сжатия ответов.
 func gzipResponseMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.Header.Get("Accept-Encoding") == "gzip" && (r.Header.Get(ContentTypeHeader) == "application/json" || r.Header.Get(ContentTypeHeader) == "text/html") {
+		if r.Header.Get("Accept-Encoding") == "gzip" &&
+			(r.Header.Get(ContentTypeHeader) == "application/json" || r.Header.Get(ContentTypeHeader) == "text/html") {
 			var buf bytes.Buffer
 			gzipWriter := gzip.NewWriter(&buf)
 
