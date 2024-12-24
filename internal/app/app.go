@@ -18,7 +18,7 @@ func Run() error {
 	}
 
 	// Создаем экземпляр репозитория для хранения URL
-	urlRepo := repository.NewStore()
+	urlRepo := repository.NewStore(cfg.FileStoragePath)
 
 	urlService := service.NewURLService(urlRepo)
 

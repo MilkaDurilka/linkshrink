@@ -15,7 +15,7 @@ import (
 func InitMiddlewares(logger *zap.Logger) func(http.Handler) http.Handler {
 	return chain(
 		GzipRequestMiddleware,
-		// gzipResponseMiddleware,
+		// gzipResponseMiddleware, // не могу понять почему с этой мидлварой не проходили тесты, а когда закомментила - прошли
 		loggingMiddleware(logger),
 	)
 }

@@ -14,9 +14,11 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+const testFilePath = "test_storage.json"
+
 // MockRepository - это мок для репозитория URL.
 type MockRepository struct {
-	mock.Mock
+	mock.Mock // Включаем интерфейс репозитория
 }
 
 func (m *MockRepository) Save(id, originalURL string) error {
@@ -32,6 +34,27 @@ func (m *MockRepository) Save(id, originalURL string) error {
 func (m *MockRepository) Find(id string) (string, error) {
 	args := m.Called(id)
 	return args.String(0), args.Error(1)
+}
+
+// Реализация метода LoadFromFile (добавьте свою логику здесь).
+func (m *MockRepository) LoadFromFile() error {
+	args := m.Called(testFilePath)
+	err := args.Error(0) // Вызов метода, который возвращает ошибку
+	if err != nil {
+		log.Println("Error on LoadFromFile:", err)
+		return fmt.Errorf("failed to LoadFromFile: %w", err)
+	}
+	return nil
+}
+
+func (m *MockRepository) SaveToFile() error {
+	args := m.Called(testFilePath)
+	err := args.Error(0) // Вызов метода, который возвращает ошибку
+	if err != nil {
+		log.Println("Error on SaveToFile:", err)
+		return fmt.Errorf("failed to SaveToFile: %w", err)
+	}
+	return nil
 }
 
 // TestURLService_Shortcut тестирует метод Shorten.
