@@ -26,12 +26,13 @@ func StartServer(cfg *config.Config, urlController controller.IURLController) er
 		}
 	}() // Отложенная синхронизация логов
 
+	middlewareChain := middleware.InitMiddlewares(logger)
 	// Подключаем middleware
-	r.Use(middleware.LoggingMiddleware(logger))
+	r.Use(middlewareChain)
 
 	r.HandleFunc("/", urlController.ShortenURL).Methods("POST")
-	r.HandleFunc("/api/shorten", urlController.ShortenURLJSON).Methods("POST")
 	r.HandleFunc("/{id}", urlController.RedirectURL).Methods("GET")
+	r.HandleFunc("/api/shorten", urlController.ShortenURLJSON).Methods("POST")
 
 	log.Println("Starting server on: " + cfg.Address)
 
