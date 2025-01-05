@@ -6,10 +6,11 @@ import (
 	"io"
 	"linkshrink/internal/config"
 	"linkshrink/internal/service"
-	"log"
+	"linkshrink/internal/utils/logger"
 	"net/http"
 
 	"github.com/gorilla/mux"
+	"go.uber.org/zap"
 )
 
 type IURLController interface {
@@ -21,6 +22,7 @@ type IURLController interface {
 type URLController struct {
 	service service.IURLService
 	cfg     *config.Config
+	logger  logger.Logger
 }
 
 type ShortenRequest struct {
@@ -33,11 +35,13 @@ type ShortenResponse struct {
 
 const (
 	ErrInvalidURL = "Invalid URL"
+	ErrInternal   = "Internal server error"
 )
 
 // NewURLController создает новый экземпляр URLController.
-func NewURLController(cfg *config.Config, srv service.IURLService) *URLController {
-	return &URLController{service: srv, cfg: cfg}
+func NewURLController(cfg *config.Config, srv service.IURLService, log logger.Logger) *URLController {
+	componentLogger := log.With(zap.String("component", "NewURLController"))
+	return &URLController{service: srv, cfg: cfg, logger: componentLogger}
 }
 
 // ShortenURL обрабатывает запрос на сокращение URL.
@@ -50,7 +54,7 @@ func (c *URLController) ShortenURL(w http.ResponseWriter, r *http.Request) {
 
 	defer func() {
 		if err := r.Body.Close(); err != nil {
-			log.Println("Error closing response body:", err)
+			c.logger.Error("Error closing response body", zap.Error(err))
 		}
 	}()
 
@@ -61,8 +65,8 @@ func (c *URLController) ShortenURL(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, ErrInvalidURL, http.StatusBadRequest)
 			return
 		}
-		log.Println("Error shortening URL: %w", err)
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		c.logger.Error("Error shortening URL", zap.Error(err))
+		http.Error(w, ErrInternal, http.StatusInternalServerError)
 		return
 	}
 
@@ -71,12 +75,12 @@ func (c *URLController) ShortenURL(w http.ResponseWriter, r *http.Request) {
 	var data = []byte(shortURL)
 	n, err := w.Write(data)
 	if err != nil {
-		log.Println("Error writing to the response stream: %w", err)
+		c.logger.Error("Error writing to the response stream", zap.Error(err))
 		return
 	}
 
 	if n != len(data) {
-		log.Println("Error writing to the response stream: не все данные записаны")
+		c.logger.Error("Error writing to the response stream: не все данные записаны")
 		return
 	}
 }
@@ -87,7 +91,7 @@ func (c *URLController) RedirectURL(w http.ResponseWriter, r *http.Request) {
 	id, ok := vars["id"]
 
 	if !ok {
-		log.Println("Key 'id' not found in route variables")
+		c.logger.Error("Key 'id' not found in route variables")
 		http.Error(w, "ID not found", http.StatusBadRequest)
 		return
 	}
@@ -100,7 +104,8 @@ func (c *URLController) RedirectURL(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		c.logger.Error("Error on GetOriginalURL", zap.Error(err))
+		http.Error(w, ErrInternal, http.StatusInternalServerError)
 		return
 	}
 
@@ -108,7 +113,8 @@ func (c *URLController) RedirectURL(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusTemporaryRedirect)
 	_, err = w.Write([]byte(originalURL))
 	if err != nil {
-		http.Error(w, "Failed to write response", http.StatusInternalServerError)
+		c.logger.Error("Error on Write", zap.Error(err))
+		http.Error(w, ErrInternal, http.StatusInternalServerError)
 		return
 	}
 }
@@ -118,6 +124,7 @@ func (c *URLController) ShortenURLJSON(w http.ResponseWriter, r *http.Request) {
 
 	// Декодируем JSON из тела запроса.
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		c.logger.Error("Error on decoding", zap.Error(err))
 		http.Error(w, "Invalid request payload", http.StatusBadRequest)
 		return
 	}
@@ -135,8 +142,8 @@ func (c *URLController) ShortenURLJSON(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, ErrInvalidURL, http.StatusBadRequest)
 			return
 		}
-		log.Println("Error shortening URL: %w", err)
-		http.Error(w, "Internal server error", http.StatusInternalServerError)
+		c.logger.Error("Error shortening URL", zap.Error(err))
+		http.Error(w, ErrInternal, http.StatusInternalServerError)
 		return
 	}
 
@@ -145,6 +152,7 @@ func (c *URLController) ShortenURLJSON(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 	if err := json.NewEncoder(w).Encode(resp); err != nil {
-		http.Error(w, "Unable to encode response", http.StatusInternalServerError)
+		c.logger.Error("Error on encoding", zap.Error(err))
+		http.Error(w, ErrInternal, http.StatusInternalServerError)
 	}
 }

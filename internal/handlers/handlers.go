@@ -5,41 +5,32 @@ import (
 	"linkshrink/internal/config"
 	"linkshrink/internal/controller"
 	"linkshrink/internal/middleware"
-	"log"
+	"linkshrink/internal/utils/logger"
 	"net/http"
 
 	"github.com/gorilla/mux"
 	"go.uber.org/zap"
 )
 
-func StartServer(cfg *config.Config, urlController controller.IURLController) error {
+func StartServer(cfg *config.Config, urlController controller.IURLController, log logger.Logger) error {
 	r := mux.NewRouter()
 
-	// Создаем логгер
-	logger, err := zap.NewProduction()
-	if err != nil {
-		return fmt.Errorf("cannot create logger: %w", err)
-	}
-	defer func() {
-		if err := logger.Sync(); err != nil {
-			log.Printf("failed to sync logger: %v", err)
-		}
-	}() // Отложенная синхронизация логов
+	componentLogger := log.With(zap.String("component", "handlers"))
 
-	middlewareChain := middleware.InitMiddlewares(logger)
-	// Подключаем middleware
+	middlewareChain := middleware.InitMiddlewares(log)
+
 	r.Use(middlewareChain)
 
 	r.HandleFunc("/", urlController.ShortenURL).Methods("POST")
 	r.HandleFunc("/{id}", urlController.RedirectURL).Methods("GET")
 	r.HandleFunc("/api/shorten", urlController.ShortenURLJSON).Methods("POST")
 
-	log.Println("Starting server on: " + cfg.Address)
+	componentLogger.Info("Starting server", zap.String("address", cfg.Address))
 
-	err = http.ListenAndServe(cfg.Address, r)
+	err := http.ListenAndServe(cfg.Address, r)
 
 	if err != nil {
-		log.Println("Error on serve: ", err)
+		componentLogger.Error("Error on serve", zap.Error(err))
 		return fmt.Errorf("failed to serve: %w", err)
 	}
 

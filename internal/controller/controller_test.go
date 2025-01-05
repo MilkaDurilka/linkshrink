@@ -16,6 +16,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
 	"github.com/stretchr/testify/require"
+	"go.uber.org/zap/zaptest"
 )
 
 // MockURLService - мок-сервис для тестирования с использованием testify.
@@ -81,6 +82,8 @@ func TestShortenURL(t *testing.T) {
 		},
 	}
 
+	logger := zaptest.NewLogger(t)
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockService := new(MockURLService)
@@ -88,7 +91,7 @@ func TestShortenURL(t *testing.T) {
 				tt.mockShorten(mockService)
 			}
 
-			controller := NewURLController(&cfg, mockService)
+			controller := NewURLController(&cfg, mockService, logger)
 
 			req := httptest.NewRequest(http.MethodPost, "/shorten", bytes.NewBufferString(tt.body))
 			rr := httptest.NewRecorder()
@@ -153,6 +156,8 @@ func TestShortenURLJSON(t *testing.T) {
 		},
 	}
 
+	logger := zaptest.NewLogger(t)
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockService := new(MockURLService)
@@ -160,7 +165,7 @@ func TestShortenURLJSON(t *testing.T) {
 				tt.mockShorten(mockService)
 			}
 
-			controller := NewURLController(&cfg, mockService)
+			controller := NewURLController(&cfg, mockService, logger)
 
 			requestBody, _ := json.Marshal(map[string]string{"url": tt.body})
 			req := httptest.NewRequest(http.MethodPost, "/shorten", bytes.NewBuffer(requestBody))
@@ -224,13 +229,15 @@ func TestRedirectURL(t *testing.T) {
 		},
 	}
 
+	logger := zaptest.NewLogger(t)
+
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockService := new(MockURLService)
 			if tt.mockGetOriginal != nil {
 				tt.mockGetOriginal(mockService)
 			}
-			controller := NewURLController(&cfg, mockService)
+			controller := NewURLController(&cfg, mockService, logger)
 			r := mux.NewRouter()
 			r.HandleFunc("/{id}", controller.RedirectURL)
 
