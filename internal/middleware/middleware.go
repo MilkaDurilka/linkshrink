@@ -17,7 +17,7 @@ import (
 func InitMiddlewares(log logger.Logger) func(http.Handler) http.Handler {
 	return chain(
 		GzipRequestMiddleware(log),
-		// gzipResponseMiddleware, // не могу понять почему с этой мидлварой не проходили тесты, а когда закомментила - прошли
+		GzipResponseMiddleware(log),
 		loggingMiddleware(log),
 	)
 }
@@ -112,8 +112,24 @@ func GzipResponseMiddleware(log logger.Logger) mux.MiddlewareFunc {
 	return func(next http.Handler) http.Handler {
 		componentLogger := log.With(zap.String("component", "GzipResponseMiddleware"))
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			// Проверяем наличие "gzip" в заголовке Accept-Encoding
 			if strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") &&
 				(r.Header.Get(ContentTypeHeader) == "application/json" || r.Header.Get(ContentTypeHeader) == "text/html") {
+				// Проверяем размер ответа, чтобы избежать сжатия маленьких файлов
+				gzw := &gzipResponseWriter{ResponseWriter: w, Writer: nil}
+				next.ServeHTTP(gzw, r)
+
+				const minGzipSize = 1400
+
+				if gzw.size < minGzipSize { // Если размер меньше 1400 байт, не сжимаем
+					// Устанавливаем заголовки и возвращаем ответ без сжатия
+					w.Header().Set(ContentTypeHeader, gzw.Header().Get(ContentTypeHeader))
+					w.WriteHeader(gzw.statusCode)
+					// Просто возвращаем оригинальный ответ
+					return
+				}
+
+				// Создаем gzip.Writer и используем его
 				var buf bytes.Buffer
 				gzipWriter := gzip.NewWriter(&buf)
 
@@ -124,19 +140,27 @@ func GzipResponseMiddleware(log logger.Logger) mux.MiddlewareFunc {
 					}
 				}()
 
-				gzw := &gzipResponseWriter{ResponseWriter: w, Writer: gzipWriter}
+				// Сбрасываем gzip.Writer для повторного использования
+				gzipWriter.Reset(&buf)
+				gzw.Writer = gzipWriter
+
+				// Обрабатываем запрос снова с gzipWriter
 				next.ServeHTTP(gzw, r)
 
+				// Устанавливаем заголовки для gzip
 				w.Header().Set("Content-Encoding", "gzip")
 				w.Header().Set(ContentTypeHeader, gzw.Header().Get(ContentTypeHeader))
 				w.WriteHeader(gzw.statusCode)
+
+				// Записываем сжатый ответ
 				_, err := buf.WriteTo(w)
 				if err != nil {
-					fmt.Println("Error writing to file:", err)
+					componentLogger.Error("Error writing compressed response", zap.Error(err))
 					return
 				}
 				return
 			}
+			// Если gzip не поддерживается, просто обрабатываем запрос
 			next.ServeHTTP(w, r)
 		})
 	}
@@ -147,6 +171,7 @@ type gzipResponseWriter struct {
 	http.ResponseWriter
 	Writer     io.Writer
 	statusCode int
+	size       int64
 }
 
 func (g *gzipResponseWriter) Header() http.Header {
@@ -159,7 +184,15 @@ func (g *gzipResponseWriter) WriteHeader(code int) {
 }
 
 func (g *gzipResponseWriter) Write(b []byte) (int, error) {
+	if g.Writer == nil {
+		n, err := g.ResponseWriter.Write(b)
+		if err != nil {
+			return n, fmt.Errorf("failed to write response: %w", err)
+		}
+		return n, nil
+	}
 	n, err := g.Writer.Write(b)
+	g.size += int64(n) //
 	if err != nil {
 		return n, fmt.Errorf("write gzip error : %w", err)
 	}
