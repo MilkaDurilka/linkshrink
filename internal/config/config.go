@@ -10,6 +10,7 @@ type Config struct {
 	Address         string // Адрес запуска HTTP-сервера
 	BaseURL         string // Базовый адрес результирующего сокращённого URL
 	FileStoragePath string
+	DataBaseDSN     string
 }
 
 // InitConfig - функция для инициализации конфигурации из аргументов командной строки.
@@ -17,17 +18,20 @@ func InitConfig() (*Config, error) {
 	addressFlag := flag.String("a", "localhost:8080", "HTTP server address")
 	baseURLFlag := flag.String("b", "http://localhost:8080", "Base URL for the shortened URL")
 	fileStoragePathFlag := flag.String("f", "default_storage.json", "Path to the file for storing URLs")
+	dataBaseDSNFlag := flag.String("d", os.Getenv("DATABASE_DSN"), "PostgreSQL connection string")
 
 	flag.Parse()
 
-	var address = getValue("SERVER_ADDRESS", addressFlag)
-	var baseURL = getValue("BASE_URL", baseURLFlag)
-	var fileStoragePath = getValue("FILE_STORAGE_PATH", fileStoragePathFlag)
+	address := getValue("SERVER_ADDRESS", addressFlag)
+	baseURL := getValue("BASE_URL", baseURLFlag)
+	fileStoragePath := getValue("FILE_STORAGE_PATH", fileStoragePathFlag)
+	dataBaseDSN := getValue("FILE_STORAGE_PATH", dataBaseDSNFlag)
 
 	return &Config{
 		Address:         address,
 		BaseURL:         baseURL,
 		FileStoragePath: fileStoragePath,
+		DataBaseDSN:     dataBaseDSN,
 	}, nil
 }
 
