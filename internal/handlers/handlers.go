@@ -12,7 +12,12 @@ import (
 	"go.uber.org/zap"
 )
 
-func StartServer(cfg *config.Config, urlController controller.IURLController, log logger.Logger) error {
+func StartServer(
+	cfg *config.Config,
+	urlController controller.IURLController,
+	pingController controller.IPingController,
+	log logger.Logger,
+) error {
 	r := mux.NewRouter()
 
 	componentLogger := log.With(zap.String("component", "handlers"))
@@ -22,6 +27,7 @@ func StartServer(cfg *config.Config, urlController controller.IURLController, lo
 	r.Use(middlewareChain)
 
 	r.HandleFunc("/", urlController.ShortenURL).Methods("POST")
+	r.HandleFunc("/ping", pingController.Ping).Methods("GET")
 	r.HandleFunc("/{id}", urlController.RedirectURL).Methods("GET")
 	r.HandleFunc("/api/shorten", urlController.ShortenURLJSON).Methods("POST")
 
