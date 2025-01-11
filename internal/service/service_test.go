@@ -14,16 +14,18 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+const testFilePath = "test_storage.json"
+
 // MockRepository - это мок для репозитория URL.
 type MockRepository struct {
-	mock.Mock
+	mock.Mock // Включаем интерфейс репозитория
 }
 
 func (m *MockRepository) Save(id, originalURL string) error {
 	args := m.Called(id, originalURL)
 	err := args.Error(0) // Вызов метода, который возвращает ошибку
 	if err != nil {
-		log.Println("Error on save:", err)
+		log.Printf("Error on save: %v", err)
 		return fmt.Errorf("failed to save: %w", err)
 	}
 	return nil
@@ -32,6 +34,26 @@ func (m *MockRepository) Save(id, originalURL string) error {
 func (m *MockRepository) Find(id string) (string, error) {
 	args := m.Called(id)
 	return args.String(0), args.Error(1)
+}
+
+func (m *MockRepository) LoadFromFile() error {
+	args := m.Called(testFilePath)
+	err := args.Error(0) // Вызов метода, который возвращает ошибку
+	if err != nil {
+		log.Printf("Error on LoadFromFile: %v", err)
+		return fmt.Errorf("failed to LoadFromFile: %w", err)
+	}
+	return nil
+}
+
+func (m *MockRepository) SaveToFile() error {
+	args := m.Called(testFilePath)
+	err := args.Error(0) // Вызов метода, который возвращает ошибку
+	if err != nil {
+		log.Printf("Error on SaveToFile: %v", err)
+		return fmt.Errorf("failed to SaveToFile: %w", err)
+	}
+	return nil
 }
 
 // TestURLService_Shortcut тестирует метод Shorten.

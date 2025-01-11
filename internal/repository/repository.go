@@ -2,7 +2,9 @@ package repository
 
 import (
 	"errors"
-	"sync"
+	filestore "linkshrink/internal/repository/file_store"
+	memorystore "linkshrink/internal/repository/memory_store"
+	"linkshrink/internal/utils/logger"
 )
 
 var (
@@ -10,46 +12,24 @@ var (
 	ErrIDAlreadyExists = errors.New("ID already exists")
 )
 
+type URLData struct {
+	UUID        string `json:"uuid"`
+	OriginalURL string `json:"original_url"`
+}
+
 type IURLRepository interface {
 	Save(id string, originalURL string) error
 	Find(id string) (string, error)
 }
 
 type URLRepository struct {
-	store map[string]string // Хранилище для хранения пар ID и оригинальных URL
-	mu    *sync.Mutex       // Мьютекс для обеспечения потокобезопасности
+	Store map[string]string // Хранилище для хранения пар ID и оригинальных URL
 }
 
 // NewStore создает новый экземпляр URLRepository.
-func NewStore() *URLRepository {
-	return &URLRepository{
-		store: make(map[string]string),
-		mu:    &sync.Mutex{},
+func NewStore(storeType string, filePath string, log logger.Logger) IURLRepository {
+	if storeType == "file" {
+		return filestore.NewFileStore(filePath, log)
 	}
-}
-
-// Save сохраняет оригинальный URL по ID.
-func (r *URLRepository) Save(id string, originalURL string) error {
-	r.mu.Lock()         // Блокируем мьютекс
-	defer r.mu.Unlock() // Разблокируем мьютекс после завершения работы
-
-	_, ok := r.store[id]
-	if !ok {
-		r.store[id] = originalURL
-		return nil
-	}
-
-	return ErrIDAlreadyExists
-}
-
-// Find ищет оригинальный URL по ID.
-func (r *URLRepository) Find(id string) (string, error) {
-	r.mu.Lock()
-	defer r.mu.Unlock()
-
-	originalURL, ok := r.store[id] // Проверяем, существует ли ID в хранилище
-	if !ok {
-		return "", ErrURLNotFound
-	}
-	return originalURL, nil
+	return memorystore.NewMemoryStore(log)
 }
