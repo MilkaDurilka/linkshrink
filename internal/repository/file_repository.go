@@ -1,21 +1,15 @@
-package filestore
+package repository
 
 import (
 	"encoding/json"
 	"errors"
 	"io"
-	memorystore "linkshrink/internal/repository/memory_store"
 	"linkshrink/internal/utils/logger"
 	"os"
 	"sync"
 
 	"go.uber.org/zap"
 )
-
-type URLData struct {
-	UUID        string `json:"uuid"`
-	OriginalURL string `json:"original_url"`
-}
 
 type IFileStore interface {
 	Save(id string, originalURL string) error
@@ -25,16 +19,17 @@ type IFileStore interface {
 }
 
 type FileStore struct {
-	memory   memorystore.MemoryStore // Встраивание MemoryStore
-	mu       *sync.Mutex             // Мьютекс для обеспечения потокобезопасности
+	memory   MemoryStore // Встраивание MemoryStore
+	mu       *sync.Mutex // Мьютекс для обеспечения потокобезопасности
 	logger   logger.Logger
 	filePath string
 }
 
-func NewFileStore(filePath string, log logger.Logger) *FileStore {
+func NewFileStore(filePath string, log logger.Logger) (*FileStore, error) {
 	componentLogger := log.With(zap.String("component", "FileStore"))
+	memory, _ := NewMemoryStore(log)
 	repo := &FileStore{
-		memory:   *memorystore.NewMemoryStore(log),
+		memory:   *memory,
 		filePath: filePath,
 		mu:       &sync.Mutex{},
 		logger:   componentLogger,
@@ -42,16 +37,31 @@ func NewFileStore(filePath string, log logger.Logger) *FileStore {
 
 	if err := repo.LoadFromFile(); err != nil {
 		componentLogger.Error("Ошибка при загрузке из файла", zap.Error(err))
+		return nil, err
 	}
 
-	return repo
+	return repo, nil
 }
 
 // LoadFromFile загружает данные из файла в репозиторий.
 func (r *FileStore) LoadFromFile() error {
 	file, err := os.Open(r.filePath)
 	if err != nil {
-		return errors.New("не удалось открыть файл: " + err.Error())
+		file, err = os.Create(r.filePath)
+		if err != nil {
+			r.logger.Error("Ошибка при создании файла", zap.Error(err))
+			return errors.New("не удалось прочитать файл: " + err.Error())
+		}
+		const filePermission = 0o600
+		data, err := json.Marshal([]string{})
+		if err != nil {
+			r.logger.Error("Ошибка при чтении файла", zap.Error(err))
+			return errors.New("не удалось прочитать файл: " + err.Error())
+		}
+		err = os.WriteFile(r.filePath, data, filePermission)
+		if err != nil {
+			r.logger.Error("Ошибка при редактировании файла", zap.Error(err))
+		}
 	}
 	defer func() {
 		if err := file.Close(); err != nil {

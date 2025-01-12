@@ -2,8 +2,7 @@ package repository
 
 import (
 	"errors"
-	filestore "linkshrink/internal/repository/file_store"
-	memorystore "linkshrink/internal/repository/memory_store"
+	"linkshrink/internal/config"
 	"linkshrink/internal/utils/logger"
 )
 
@@ -27,9 +26,12 @@ type URLRepository struct {
 }
 
 // NewStore создает новый экземпляр URLRepository.
-func NewStore(storeType string, filePath string, log logger.Logger) IURLRepository {
-	if storeType == "file" {
-		return filestore.NewFileStore(filePath, log)
+func NewStore(cfg *config.Config, log logger.Logger) (IURLRepository, error) {
+	if cfg.DataBaseDSN != "" {
+		return NewPostgresRepository(cfg.DataBaseDSN, log)
 	}
-	return memorystore.NewMemoryStore(log)
+	if cfg.FileStoragePath != "" {
+		return NewFileStore(cfg.FileStoragePath, log)
+	}
+	return NewMemoryStore(log)
 }

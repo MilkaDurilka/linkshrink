@@ -1,7 +1,7 @@
 package controller
 
 import (
-	"database/sql"
+	"linkshrink/internal/repository"
 	"linkshrink/internal/utils/logger"
 	"net/http"
 
@@ -13,17 +13,27 @@ type IPingController interface {
 }
 
 type PingController struct {
-	db     *sql.DB
+	repo   repository.IURLRepository
 	logger logger.Logger
 }
 
-func NewPingHandler(db *sql.DB, log logger.Logger) *PingController {
+func NewPingHandler(repo repository.IURLRepository, log logger.Logger) *PingController {
 	componentLogger := log.With(zap.String("component", "NewPingHandler"))
-	return &PingController{db: db, logger: componentLogger}
+	return &PingController{repo: repo, logger: componentLogger}
 }
 
 func (c *PingController) Ping(w http.ResponseWriter, r *http.Request) {
-	if err := c.db.Ping(); err != nil {
+	var pingRepo repository.IPingableRepository
+
+	if postgresRepo, ok := c.repo.(repository.IPingableRepository); ok {
+		pingRepo = postgresRepo
+	} else {
+		c.logger.Error("urlRepo does not implement IPingableRepository")
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
+
+	if err := pingRepo.Ping(); err != nil {
 		c.logger.Error("Database ping failed", zap.Error(err))
 		http.Error(w, "Unable to connect to database", http.StatusInternalServerError)
 		return

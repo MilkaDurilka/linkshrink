@@ -29,24 +29,17 @@ func Run() error {
 		return fmt.Errorf("failed to initialize config: %w", err)
 	}
 
-	db, err := config.InitDB(cfg.DataBaseDSN)
+	urlRepo, err := repository.NewStore(cfg, logger)
 	if err != nil {
-		logger.Info("Unable to connect to database", zap.Error(err))
+		logger.Error("Unable to connect to repository", zap.Error(err))
+		return fmt.Errorf("failed to connect to repository: %w", err)
 	}
-
-	defer func() {
-		if err := db.Close(); err != nil {
-			logger.Error("Failed to close database connection", zap.Error(err))
-		}
-	}()
-
-	// Создаем экземпляр репозитория для хранения URL
-	urlRepo := repository.NewStore("file", cfg.FileStoragePath, logger)
 
 	urlService := service.NewURLService(urlRepo)
 
 	urlController := controller.NewURLController(cfg, urlService, logger)
-	pingController := controller.NewPingHandler(db, logger)
+
+	pingController := controller.NewPingHandler(urlRepo, logger)
 
 	err = handlers.StartServer(cfg, urlController, pingController, logger)
 
