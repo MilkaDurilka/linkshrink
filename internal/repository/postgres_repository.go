@@ -15,6 +15,18 @@ type IPingableRepository interface {
 	Ping() error
 }
 
+type ITransaction interface {
+	Commit() error
+	Rollback() error
+}
+
+type ITransactableRepository interface {
+	IURLRepository
+	Begin() (*sql.Tx, error)
+	Commit() error
+	Rollback() error
+}
+
 type PostgresRepository struct {
 	db     *sql.DB
 	logger logger.Logger
@@ -71,4 +83,12 @@ func (p *PostgresRepository) Ping() error {
 		return errors.New("Ошибка при ping до базы данных:" + err.Error())
 	}
 	return nil
+}
+
+func (p *PostgresRepository) Begin() (*sql.Tx, error) {
+	transaction, err := p.db.Begin()
+	if err != nil {
+		return nil, errors.New("Ошибка при начале транзакции в базе данных:" + err.Error())
+	}
+	return transaction, nil
 }
