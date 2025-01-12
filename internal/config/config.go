@@ -17,7 +17,7 @@ type Config struct {
 func InitConfig() (*Config, error) {
 	addressFlag := flag.String("a", "localhost:8080", "HTTP server address")
 	baseURLFlag := flag.String("b", "http://localhost:8080", "Base URL for the shortened URL")
-	fileStoragePathFlag := flag.String("f", "cmd/shortener/default_storage.json", "Path to the file for storing URLs")
+	fileStoragePathFlag := flag.String("f", "default_storage.json", "Path to the file for storing URLs")
 	dataBaseDSNFlag := flag.String("d", os.Getenv("DATABASE_DSN"), "PostgreSQL connection string")
 
 	flag.Parse()

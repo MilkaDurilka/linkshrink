@@ -1,7 +1,6 @@
 package repository_test
 
 import (
-	"encoding/json"
 	"fmt"
 	"log"
 	"os"
@@ -22,24 +21,6 @@ const testFilePath = "default_storage.json"
 func setup() {
 	// Удаляем файл перед каждым тестом, чтобы избежать конфликтов
 	_ = os.Remove(testFilePath)
-	file, err := os.Create(testFilePath)
-	if err != nil {
-		log.Printf("Ошибка при создании файла: %v", err)
-	}
-	const filePermission = 0o600
-	data, err := json.Marshal([]string{})
-	if err != nil {
-		log.Printf("Ошибка при чтении файла: %v", err)
-	}
-	err = os.WriteFile(testFilePath, data, filePermission)
-	if err != nil {
-		log.Printf("Ошибка при редактировании файла: %v", err)
-	}
-	defer func() {
-		if err := file.Close(); err != nil {
-			log.Printf("Ошибка при закрытии файла: %v", err)
-		}
-	}()
 }
 
 var tests = []struct {

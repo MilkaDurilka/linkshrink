@@ -47,7 +47,21 @@ func NewFileStore(filePath string, log logger.Logger) (*FileStore, error) {
 func (r *FileStore) LoadFromFile() error {
 	file, err := os.Open(r.filePath)
 	if err != nil {
-		return errors.New("не удалось открыть файл: " + err.Error())
+		file, err = os.Create(r.filePath)
+		if err != nil {
+			r.logger.Error("Ошибка при создании файла", zap.Error(err))
+			return errors.New("не удалось прочитать файл: " + err.Error())
+		}
+		const filePermission = 0o600
+		data, err := json.Marshal([]string{})
+		if err != nil {
+			r.logger.Error("Ошибка при чтении файла", zap.Error(err))
+			return errors.New("не удалось прочитать файл: " + err.Error())
+		}
+		err = os.WriteFile(r.filePath, data, filePermission)
+		if err != nil {
+			r.logger.Error("Ошибка при редактировании файла", zap.Error(err))
+		}
 	}
 	defer func() {
 		if err := file.Close(); err != nil {
