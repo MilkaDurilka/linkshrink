@@ -1,22 +1,11 @@
-package memorystore
+package repository
 
 import (
-	"errors"
 	"linkshrink/internal/utils/logger"
 	"sync"
 
 	"go.uber.org/zap"
 )
-
-var (
-	ErrURLNotFound     = errors.New("URL not found")
-	ErrIDAlreadyExists = errors.New("ID already exists")
-)
-
-type URLData struct {
-	UUID        string `json:"uuid"`
-	OriginalURL string `json:"original_url"`
-}
 
 type IMemoryStore interface {
 	Save(id string, originalURL string) error
@@ -30,7 +19,7 @@ type MemoryStore struct {
 }
 
 // NewMemoryStore создает новый экземпляр MemoryStore.
-func NewMemoryStore(log logger.Logger) *MemoryStore {
+func NewMemoryStore(log logger.Logger) (*MemoryStore, error) {
 	componentLogger := log.With(zap.String("component", "MemoryStore"))
 	repo := &MemoryStore{
 		Store:  make(map[string]string),
@@ -38,7 +27,7 @@ func NewMemoryStore(log logger.Logger) *MemoryStore {
 		logger: componentLogger,
 	}
 
-	return repo
+	return repo, nil
 }
 
 // Save сохраняет оригинальный URL по ID.

@@ -1,12 +1,14 @@
 package repository_test
 
 import (
+	"encoding/json"
 	"fmt"
 	"log"
 	"os"
 	"sync"
 	"testing"
 
+	"linkshrink/internal/config"
 	"linkshrink/internal/repository"
 	"linkshrink/internal/utils"
 
@@ -15,24 +17,44 @@ import (
 	"go.uber.org/zap/zaptest"
 )
 
-const testFilePath = "test_storage.json"
+const testFilePath = "default_storage.json"
 
 func setup() {
 	// Удаляем файл перед каждым тестом, чтобы избежать конфликтов
 	_ = os.Remove(testFilePath)
+	file, err := os.Create(testFilePath)
+	if err != nil {
+		log.Printf("Ошибка при создании файла: %v", err)
+	}
+	const filePermission = 0o600
+	data, err := json.Marshal([]string{})
+	if err != nil {
+		log.Printf("Ошибка при чтении файла: %v", err)
+	}
+	err = os.WriteFile(testFilePath, data, filePermission)
+	if err != nil {
+		log.Printf("Ошибка при редактировании файла: %v", err)
+	}
+	defer func() {
+		if err := file.Close(); err != nil {
+			log.Printf("Ошибка при закрытии файла: %v", err)
+		}
+	}()
 }
 
 var tests = []struct {
-	name     string
-	repoType string
+	name string
+	cfg  config.Config
 }{
 	{
-		name:     "MempStore",
-		repoType: "memo",
+		name: "Memo",
+		cfg:  config.Config{},
 	},
 	{
-		name:     "FileStore",
-		repoType: "file",
+		name: "File",
+		cfg: config.Config{
+			FileStoragePath: testFilePath,
+		},
 	},
 }
 
@@ -42,9 +64,10 @@ func TestURLRepository_Save(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			repo := repository.NewStore(tt.repoType, testFilePath, logger)
+			repo, err := repository.NewStore(&tt.cfg, logger)
+			require.NoError(t, err)
 			// Тестирование сохранения URL
-			err := repo.Save("abc123", "http://original.url")
+			err = repo.Save("abc123", "http://original.url")
 			require.NoError(t, err)
 
 			// Проверяем, что URL сохранен
@@ -60,10 +83,10 @@ func TestURLRepository_Find(t *testing.T) {
 	logger := zaptest.NewLogger(t)
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			repo := repository.NewStore(tt.repoType, testFilePath, logger)
-
+			repo, err := repository.NewStore(&tt.cfg, logger)
+			require.NoError(t, err)
 			// Сохраняем URL для дальнейшего поиска
-			err := repo.Save("abc123", "http://original.url")
+			err = repo.Save("abc123", "http://original.url")
 			require.NoError(t, err)
 
 			// Тестирование поиска существующего URL
@@ -84,7 +107,8 @@ func TestURLRepository_ConcurrentAccess(t *testing.T) {
 	logger := zaptest.NewLogger(t)
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			repo := repository.NewStore(tt.repoType, testFilePath, logger)
+			repo, err := repository.NewStore(&tt.cfg, logger)
+			require.NoError(t, err)
 
 			// Используем WaitGroup для ожидания завершения всех горутин
 			var wg sync.WaitGroup
@@ -115,15 +139,19 @@ func TestURLRepository_ConcurrentAccess(t *testing.T) {
 func TestURLRepository_LoadFromFile(t *testing.T) {
 	// Создаем тестовый репозиторий и сохраняем несколько URL
 	logger := zaptest.NewLogger(t)
+	cfg := config.Config{
+		FileStoragePath: testFilePath,
+	}
 
-	repo := repository.NewStore("file", testFilePath, logger)
-
+	repo, err := repository.NewStore(&cfg, logger)
+	require.NoError(t, err)
 	// Сохраняем несколько URL
 	_ = repo.Save("abc123", "http://original.url")
 	_ = repo.Save("def456", "http://another.url")
 
 	// Создаем новый репозиторий, который должен загрузить данные из файла
-	repo2 := repository.NewStore("file", testFilePath, logger)
+	repo2, err := repository.NewStore(&cfg, logger)
+	require.NoError(t, err)
 
 	// Проверяем, что данные были загружены корректно
 	originalURL, err := repo2.Find("abc123")
