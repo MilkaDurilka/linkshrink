@@ -29,7 +29,6 @@ func Run() error {
 		return fmt.Errorf("failed to initialize config: %w", err)
 	}
 
-
 	urlRepo, err := repository.NewStore(cfg, logger)
 	if err != nil {
 		logger.Error("Unable to connect to repository", zap.Error(err))

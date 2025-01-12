@@ -41,7 +41,10 @@ func NewPostgresRepository(dsn string, log logger.Logger) (*PostgresRepository, 
 
 func (p *PostgresRepository) Save(id string, originalURL string) error {
 	_, err := p.db.Exec("INSERT INTO urls (uuid, original_url) VALUES ($1, $2)", id, originalURL)
-	return errors.New("не удалось сохранить в бд файл: " + err.Error())
+	if err != nil {
+		return errors.New("не удалось сохранить в бд файл: " + err.Error())
+	}
+	return nil
 }
 
 func (p *PostgresRepository) Find(id string) (string, error) {
