@@ -7,6 +7,8 @@ import (
 
 	"linkshrink/internal/utils/logger"
 
+	"github.com/jackc/pgconn"
+	"github.com/jackc/pgerrcode"
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
@@ -46,14 +48,32 @@ func NewPostgresRepository(dsn string, log logger.Logger) (*PostgresRepository, 
 		return nil, fmt.Errorf("failed to create table: %w", err)
 	}
 
+	_, err = db.Exec(`CREATE UNIQUE INDEX idx_original_url ON urls (original_url);`)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create index: %w", err)
+	}
+
 	return &PostgresRepository{db: db, logger: log}, nil
 }
 
 func (p *PostgresRepository) Save(id string, originalURL string) error {
-	_, err := p.db.Exec("INSERT INTO urls (uuid, original_url) VALUES ($1, $2)", id, originalURL)
+	_, err := p.db.Exec("INSERT INTO urls (uuid, original_url)"+
+		"VALUES ($1, $2)"+
+		"ON CONFLICT (original_url) DO NOTHING;", id, originalURL)
+
 	if err != nil {
-		return errors.New("не удалось сохранить в бд файл: " + err.Error())
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) {
+			if pgErr.Code == pgerrcode.UniqueViolation {
+				return errors.New("Ошибка уникальности:" + err.Error())
+			} else {
+				return errors.New("Ошибка:" + pgErr.Message + ", Код:" + pgErr.Code)
+			}
+		} else {
+			return errors.New("error inserting URL" + err.Error())
+		}
 	}
+
 	return nil
 }
 
