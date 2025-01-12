@@ -27,11 +27,11 @@ type URLRepository struct {
 
 // NewStore создает новый экземпляр URLRepository.
 func NewStore(cfg *config.Config, log logger.Logger) (IURLRepository, error) {
-	if cfg.DataBaseDSN != "" {
-		return NewPostgresRepository(cfg.DataBaseDSN, log)
-	}
 	if cfg.FileStoragePath != "" {
 		return NewFileStore(cfg.FileStoragePath, log)
+	}
+	if cfg.DataBaseDSN != "" {
+		return NewPostgresRepository(cfg.DataBaseDSN, log)
 	}
 	return NewMemoryStore(log)
 }
