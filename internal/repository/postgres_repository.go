@@ -48,10 +48,10 @@ func NewPostgresRepository(dsn string, log logger.Logger) (*PostgresRepository, 
 		return nil, fmt.Errorf("failed to create table: %w", err)
 	}
 
-	_, err = db.Exec(`CREATE UNIQUE INDEX idx_original_url ON urls (original_url);`)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create index: %w", err)
-	}
+	// _, err = db.Exec(`CREATE UNIQUE INDEX idx_original_url ON urls (original_url);`)
+	// if err != nil {
+	// 	return nil, fmt.Errorf("failed to create index: %w", err)
+	// }
 
 	return &PostgresRepository{db: db, logger: log}, nil
 }
