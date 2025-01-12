@@ -30,6 +30,7 @@ func StartServer(
 	r.HandleFunc("/ping", pingController.Ping).Methods("GET")
 	r.HandleFunc("/{id}", urlController.RedirectURL).Methods("GET")
 	r.HandleFunc("/api/shorten", urlController.ShortenURLJSON).Methods("POST")
+	r.HandleFunc("/api/shorten/batch", urlController.BatchShortenURL).Methods("POST")
 
 	componentLogger.Info("Starting server", zap.String("address", cfg.Address))
 

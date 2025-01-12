@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"linkshrink/internal/config"
+	"linkshrink/internal/repository"
 	"linkshrink/internal/service"
 
 	"github.com/gorilla/mux"
@@ -32,6 +33,20 @@ func (m *MockURLService) Shorten(baseURL string, url string) (string, error) {
 func (m *MockURLService) GetOriginalURL(id string) (string, error) {
 	args := m.Called(id)
 	return args.String(0), args.Error(1)
+}
+
+func (m *MockURLService) BeginTransaction() (repository.ITransaction, error) {
+	args := m.Called()
+	tx, ok := args.Get(0).(repository.ITransaction)
+	if !ok {
+		return nil, errors.New("failed to cast to ITransaction")
+	}
+	err := args.Error(1)
+	if err != nil {
+		return nil, errors.New("begin transaction error")
+	}
+
+	return tx, nil
 }
 
 var cfg = config.Config{

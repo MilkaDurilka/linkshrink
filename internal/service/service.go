@@ -15,6 +15,7 @@ var (
 type IURLService interface {
 	Shorten(baseURL string, url string) (string, error)
 	GetOriginalURL(id string) (string, error)
+	BeginTransaction() (repository.ITransaction, error)
 }
 
 type URLService struct {
@@ -58,4 +59,21 @@ func (s *URLService) GetOriginalURL(id string) (string, error) {
 		return "", fmt.Errorf("%s not found  %w ", originalURL, ErrURLNotFound)
 	}
 	return originalURL, nil
+}
+
+func (s *URLService) BeginTransaction() (repository.ITransaction, error) {
+	var transactionRepo repository.ITransactableRepository
+
+	if postgresRepo, ok := s.repo.(repository.ITransactableRepository); ok {
+		transactionRepo = postgresRepo
+	} else {
+		return nil, fmt.Errorf("transactionRepo  does not implement ITransactableRepository: %w ", ErrInvalidURL)
+	}
+
+	tx, err := transactionRepo.Begin()
+	if err != nil {
+		return nil, fmt.Errorf("tx begin error: %w ", ErrInvalidURL)
+	}
+
+	return tx, nil
 }
