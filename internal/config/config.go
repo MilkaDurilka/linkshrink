@@ -18,14 +18,14 @@ func InitConfig() (*Config, error) {
 	addressFlag := flag.String("a", "localhost:8080", "HTTP server address")
 	baseURLFlag := flag.String("b", "http://localhost:8080", "Base URL for the shortened URL")
 	fileStoragePathFlag := flag.String("f", "default_storage.json", "Path to the file for storing URLs")
-	dataBaseDSNFlag := flag.String("d", os.Getenv("DATABASE_DSN"), "PostgreSQL connection string")
+	dataBaseDSNFlag := flag.String("d", "", "PostgreSQL connection string")
 
 	flag.Parse()
 
 	address := getValue("SERVER_ADDRESS", addressFlag)
 	baseURL := getValue("BASE_URL", baseURLFlag)
 	fileStoragePath := getValue("FILE_STORAGE_PATH", fileStoragePathFlag)
-	dataBaseDSN := getValue("FILE_STORAGE_PATH", dataBaseDSNFlag)
+	dataBaseDSN := getValue("DATABASE_DSN", dataBaseDSNFlag)
 
 	return &Config{
 		Address:         address,
