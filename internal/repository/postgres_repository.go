@@ -23,8 +23,6 @@ type ITransaction interface {
 type ITransactableRepository interface {
 	IURLRepository
 	Begin() (*sql.Tx, error)
-	Commit() error
-	Rollback() error
 }
 
 type PostgresRepository struct {
