@@ -15,15 +15,15 @@ var (
 type IURLService interface {
 	Shorten(baseURL string, url string) (string, error)
 	GetOriginalURL(id string) (string, error)
-	BeginTransaction() (repository.ITransaction, error)
+	BeginTransaction() (repository.Transaction, error)
 }
 
 type URLService struct {
-	repo        repository.IURLRepository
+	repo        repository.URLRepository
 	idGenerator *IDGenerator
 }
 
-func NewURLService(repo repository.IURLRepository) *URLService {
+func NewURLService(repo repository.URLRepository) *URLService {
 	return &URLService{ // Возвращаем новый сервис с заданным репозиторием
 		repo:        repo,
 		idGenerator: NewIDGenerator(),
@@ -61,10 +61,10 @@ func (s *URLService) GetOriginalURL(id string) (string, error) {
 	return originalURL, nil
 }
 
-func (s *URLService) BeginTransaction() (repository.ITransaction, error) {
-	var transactionRepo repository.ITransactableRepository
+func (s *URLService) BeginTransaction() (repository.Transaction, error) {
+	var transactionRepo repository.TransactableRepository
 
-	if postgresRepo, ok := s.repo.(repository.ITransactableRepository); ok {
+	if postgresRepo, ok := s.repo.(repository.TransactableRepository); ok {
 		transactionRepo = postgresRepo
 	} else {
 		return nil, fmt.Errorf("transactionRepo  does not implement ITransactableRepository: %w ", ErrInvalidURL)

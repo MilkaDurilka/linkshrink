@@ -35,9 +35,9 @@ func (m *MockURLService) GetOriginalURL(id string) (string, error) {
 	return args.String(0), args.Error(1)
 }
 
-func (m *MockURLService) BeginTransaction() (repository.ITransaction, error) {
+func (m *MockURLService) BeginTransaction() (repository.Transaction, error) {
 	args := m.Called()
-	tx, ok := args.Get(0).(repository.ITransaction)
+	tx, ok := args.Get(0).(repository.Transaction)
 	if !ok {
 		return nil, errors.New("failed to cast to ITransaction")
 	}

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 
+	errorsUtils "linkshrink/internal/utils/errors"
 	"linkshrink/internal/utils/logger"
 
 	"github.com/jackc/pgconn"
@@ -12,18 +13,18 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
-type IPingableRepository interface {
-	IURLRepository
+type PingableRepository interface {
+	URLRepository
 	Ping() error
 }
 
-type ITransaction interface {
+type Transaction interface {
 	Commit() error
 	Rollback() error
 }
 
-type ITransactableRepository interface {
-	IURLRepository
+type TransactableRepository interface {
+	URLRepository
 	Begin() (*sql.Tx, error)
 }
 
@@ -40,9 +41,9 @@ func NewPostgresRepository(dsn string, log logger.Logger) (*PostgresRepository, 
 
 	// Создание таблицы, если она не существует
 	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS urls (
-		id SERIAL PRIMARY KEY,
-		uuid TEXT NOT NULL UNIQUE,
-		original_url TEXT NOT NULL
+		id INTEGER PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+		uuid VARCHAR(100) NOT NULL UNIQUE,
+		original_url VARCHAR(2048) NOT NULL
 	);`)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create table: %w", err)
@@ -66,7 +67,7 @@ func (p *PostgresRepository) Save(id string, originalURL string) error {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) {
 			if pgErr.Code == pgerrcode.UniqueViolation {
-				return errors.New("Ошибка уникальности:" + err.Error())
+				return &errorsUtils.UniqueViolationError{Err: err}
 			} else {
 				return errors.New("Ошибка:" + pgErr.Message + ", Код:" + pgErr.Code)
 			}

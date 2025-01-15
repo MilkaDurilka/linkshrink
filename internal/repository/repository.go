@@ -4,6 +4,8 @@ import (
 	"errors"
 	"linkshrink/internal/config"
 	"linkshrink/internal/utils/logger"
+
+	"go.uber.org/zap"
 )
 
 var (
@@ -16,22 +18,21 @@ type URLData struct {
 	OriginalURL string `json:"original_url"`
 }
 
-type IURLRepository interface {
+type URLRepository interface {
 	Save(id string, originalURL string) error
 	Find(id string) (string, error)
 }
 
-type URLRepository struct {
-	Store map[string]string // Хранилище для хранения пар ID и оригинальных URL
-}
-
 // NewStore создает новый экземпляр URLRepository.
-func NewStore(cfg *config.Config, log logger.Logger) (IURLRepository, error) {
+func NewStore(cfg *config.Config, log logger.Logger) (URLRepository, error) {
 	if cfg.DataBaseDSN != "" {
-		return NewPostgresRepository(cfg.DataBaseDSN, log)
+		dbLogger := log.With(zap.String("component", "DBStore"))
+		return NewPostgresRepository(cfg.DataBaseDSN, dbLogger)
 	}
 	if cfg.FileStoragePath != "" {
-		return NewFileStore(cfg.FileStoragePath, log)
+		fileLogger := log.With(zap.String("component", "FileStore"))
+		return NewFileStore(cfg.FileStoragePath, fileLogger)
 	}
-	return NewMemoryStore(log)
+	memoryLogger := log.With(zap.String("component", "MemoryStore"))
+	return NewMemoryStore(memoryLogger)
 }

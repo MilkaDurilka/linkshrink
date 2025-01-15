@@ -26,17 +26,15 @@ type FileStore struct {
 }
 
 func NewFileStore(filePath string, log logger.Logger) (*FileStore, error) {
-	componentLogger := log.With(zap.String("component", "FileStore"))
 	memory, _ := NewMemoryStore(log)
 	repo := &FileStore{
 		memory:   *memory,
 		filePath: filePath,
 		mu:       &sync.Mutex{},
-		logger:   componentLogger,
+		logger:   log,
 	}
 
 	if err := repo.LoadFromFile(); err != nil {
-		componentLogger.Error("Ошибка при загрузке из файла", zap.Error(err))
 		return nil, err
 	}
 
@@ -49,13 +47,11 @@ func (r *FileStore) LoadFromFile() error {
 	if err != nil {
 		file, err = os.Create(r.filePath)
 		if err != nil {
-			r.logger.Error("Ошибка при создании файла", zap.Error(err))
 			return errors.New("не удалось прочитать файл: " + err.Error())
 		}
 		const filePermission = 0o600
 		data, err := json.Marshal([]string{})
 		if err != nil {
-			r.logger.Error("Ошибка при чтении файла", zap.Error(err))
 			return errors.New("не удалось прочитать файл: " + err.Error())
 		}
 		err = os.WriteFile(r.filePath, data, filePermission)

@@ -3,8 +3,6 @@ package repository
 import (
 	"linkshrink/internal/utils/logger"
 	"sync"
-
-	"go.uber.org/zap"
 )
 
 type IMemoryStore interface {
@@ -20,11 +18,10 @@ type MemoryStore struct {
 
 // NewMemoryStore создает новый экземпляр MemoryStore.
 func NewMemoryStore(log logger.Logger) (*MemoryStore, error) {
-	componentLogger := log.With(zap.String("component", "MemoryStore"))
 	repo := &MemoryStore{
 		Store:  make(map[string]string),
 		mu:     &sync.Mutex{},
-		logger: componentLogger,
+		logger: log,
 	}
 
 	return repo, nil

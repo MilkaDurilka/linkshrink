@@ -13,14 +13,14 @@ import (
 	"go.uber.org/zap"
 )
 
-type IURLController interface {
+type URLController interface {
 	ShortenURL(w http.ResponseWriter, r *http.Request)
 	RedirectURL(w http.ResponseWriter, r *http.Request)
 	ShortenURLJSON(w http.ResponseWriter, r *http.Request)
 	BatchShortenURL(w http.ResponseWriter, r *http.Request)
 }
 
-type URLController struct {
+type URLControllerImpl struct {
 	service service.IURLService
 	cfg     *config.Config
 	logger  logger.Logger
@@ -40,13 +40,12 @@ const (
 )
 
 // NewURLController создает новый экземпляр URLController.
-func NewURLController(cfg *config.Config, srv service.IURLService, log logger.Logger) *URLController {
-	componentLogger := log.With(zap.String("component", "NewURLController"))
-	return &URLController{service: srv, cfg: cfg, logger: componentLogger}
+func NewURLController(cfg *config.Config, srv service.IURLService, log logger.Logger) *URLControllerImpl {
+	return &URLControllerImpl{service: srv, cfg: cfg, logger: log}
 }
 
 // ShortenURL обрабатывает запрос на сокращение URL.
-func (c *URLController) ShortenURL(w http.ResponseWriter, r *http.Request) {
+func (c *URLControllerImpl) ShortenURL(w http.ResponseWriter, r *http.Request) {
 	url, err := io.ReadAll(r.Body)
 	if err != nil || len(url) == 0 {
 		http.Error(w, ErrInvalidURL, http.StatusBadRequest)
@@ -87,7 +86,7 @@ func (c *URLController) ShortenURL(w http.ResponseWriter, r *http.Request) {
 }
 
 // RedirectURL обрабатывает запрос на перенаправление по ID.
-func (c *URLController) RedirectURL(w http.ResponseWriter, r *http.Request) {
+func (c *URLControllerImpl) RedirectURL(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	id, ok := vars["id"]
 
@@ -120,7 +119,7 @@ func (c *URLController) RedirectURL(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (c *URLController) ShortenURLJSON(w http.ResponseWriter, r *http.Request) {
+func (c *URLControllerImpl) ShortenURLJSON(w http.ResponseWriter, r *http.Request) {
 	var req ShortenRequest
 
 	// Декодируем JSON из тела запроса.
@@ -168,7 +167,7 @@ type BatchShortenResponse struct {
 	ShortURL      string `json:"short_url"`
 }
 
-func (c *URLController) BatchShortenURL(w http.ResponseWriter, r *http.Request) {
+func (c *URLControllerImpl) BatchShortenURL(w http.ResponseWriter, r *http.Request) {
 	var requests []BatchShortenRequest
 
 	// Декодируем JSON из тела запроса.

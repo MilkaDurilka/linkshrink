@@ -25,26 +25,26 @@ func Run() error {
 
 	cfg, err := config.InitConfig()
 	if err != nil {
-		logger.Error("Error initializing config", zap.Error(err))
 		return fmt.Errorf("failed to initialize config: %w", err)
 	}
 
 	urlRepo, err := repository.NewStore(cfg, logger)
 	if err != nil {
-		logger.Error("Unable to connect to repository", zap.Error(err))
 		return fmt.Errorf("failed to connect to repository: %w", err)
 	}
 
 	urlService := service.NewURLService(urlRepo)
 
-	urlController := controller.NewURLController(cfg, urlService, logger)
+	urlLogger := logger.With(zap.String("component", "NewURLController"))
+	urlController := controller.NewURLController(cfg, urlService, urlLogger)
 
-	pingController := controller.NewPingHandler(urlRepo, logger)
+	pinggLogger := logger.With(zap.String("component", "NewPingHandler"))
+	pingController := controller.NewPingHandler(urlRepo, pinggLogger)
 
-	err = handlers.StartServer(cfg, urlController, pingController, logger)
+	handlersLogger := logger.With(zap.String("component", "handlers"))
+	err = handlers.StartServer(cfg, urlController, pingController, handlersLogger)
 
 	if err != nil {
-		logger.Error("Error on start serve", zap.Error(err))
 		return fmt.Errorf("failed to start serve: %w", err)
 	}
 

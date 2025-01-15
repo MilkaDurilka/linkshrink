@@ -8,26 +8,23 @@ import (
 	"go.uber.org/zap"
 )
 
-type IPingController interface {
+type PingController interface {
 	Ping(w http.ResponseWriter, r *http.Request)
 }
 
-type PingController struct {
-	repo   repository.IURLRepository
+type PingControllerImpl struct {
+	repo   repository.URLRepository
 	logger logger.Logger
 }
 
-func NewPingHandler(repo repository.IURLRepository, log logger.Logger) *PingController {
-	componentLogger := log.With(zap.String("component", "NewPingHandler"))
-	return &PingController{repo: repo, logger: componentLogger}
+func NewPingHandler(repo repository.URLRepository, log logger.Logger) *PingControllerImpl {
+	return &PingControllerImpl{repo: repo, logger: log}
 }
 
-func (c *PingController) Ping(w http.ResponseWriter, r *http.Request) {
-	var pingRepo repository.IPingableRepository
+func (c *PingControllerImpl) Ping(w http.ResponseWriter, r *http.Request) {
+	pingRepo, ok := c.repo.(repository.PingableRepository)
 
-	if postgresRepo, ok := c.repo.(repository.IPingableRepository); ok {
-		pingRepo = postgresRepo
-	} else {
+	if !ok {
 		c.logger.Error("urlRepo does not implement IPingableRepository")
 		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
 		return

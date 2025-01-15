@@ -14,13 +14,11 @@ import (
 
 func StartServer(
 	cfg *config.Config,
-	urlController controller.IURLController,
-	pingController controller.IPingController,
+	urlController controller.URLController,
+	pingController controller.PingController,
 	log logger.Logger,
 ) error {
 	r := mux.NewRouter()
-
-	componentLogger := log.With(zap.String("component", "handlers"))
 
 	middlewareChain := middleware.InitMiddlewares(log)
 
@@ -32,12 +30,11 @@ func StartServer(
 	r.HandleFunc("/api/shorten", urlController.ShortenURLJSON).Methods("POST")
 	r.HandleFunc("/api/shorten/batch", urlController.BatchShortenURL).Methods("POST")
 
-	componentLogger.Info("Starting server", zap.String("address", cfg.Address))
+	log.Info("Starting server", zap.String("address", cfg.Address))
 
 	err := http.ListenAndServe(cfg.Address, r)
 
 	if err != nil {
-		componentLogger.Error("Error on serve", zap.Error(err))
 		return fmt.Errorf("failed to serve: %w", err)
 	}
 

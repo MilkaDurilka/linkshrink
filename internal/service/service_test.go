@@ -3,7 +3,6 @@ package service_test
 import (
 	"errors"
 	"fmt"
-	"log"
 	"testing"
 
 	"linkshrink/internal/repository"
@@ -25,7 +24,6 @@ func (m *MockRepository) Save(id, originalURL string) error {
 	args := m.Called(id, originalURL)
 	err := args.Error(0) // Вызов метода, который возвращает ошибку
 	if err != nil {
-		log.Printf("Error on save: %v", err)
 		return fmt.Errorf("failed to save: %w", err)
 	}
 	return nil
@@ -40,7 +38,6 @@ func (m *MockRepository) LoadFromFile() error {
 	args := m.Called(testFilePath)
 	err := args.Error(0) // Вызов метода, который возвращает ошибку
 	if err != nil {
-		log.Printf("Error on LoadFromFile: %v", err)
 		return fmt.Errorf("failed to LoadFromFile: %w", err)
 	}
 	return nil
@@ -50,7 +47,6 @@ func (m *MockRepository) SaveToFile() error {
 	args := m.Called(testFilePath)
 	err := args.Error(0) // Вызов метода, который возвращает ошибку
 	if err != nil {
-		log.Printf("Error on SaveToFile: %v", err)
 		return fmt.Errorf("failed to SaveToFile: %w", err)
 	}
 	return nil
