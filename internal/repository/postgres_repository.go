@@ -57,9 +57,10 @@ func NewPostgresRepository(dsn string, log logger.Logger) (*PostgresRepository, 
 }
 
 func (p *PostgresRepository) Save(id string, originalURL string) error {
-	_, err := p.db.Exec("INSERT INTO urls (uuid, original_url)"+
-		"VALUES ($1, $2)"+
-		"ON CONFLICT (original_url) DO NOTHING;", id, originalURL)
+	// _, err := p.db.Exec("INSERT INTO urls (uuid, original_url)"+
+	// 	"VALUES ($1, $2)"+
+	// 	"ON CONFLICT (original_url) DO NOTHING;", id, originalURL)
+	_, err := p.db.Exec("INSERT INTO urls (uuid, original_url) VALUES ($1, $2)", id, originalURL)
 
 	if err != nil {
 		var pgErr *pgconn.PgError
