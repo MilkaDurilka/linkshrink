@@ -48,20 +48,27 @@ func NewPostgresRepository(dsn string, log logger.Logger) (*PostgresRepository, 
 		return nil, fmt.Errorf("failed to create table: %w", err)
 	}
 
-	_, err = db.Exec(`CREATE UNIQUE INDEX idx_original_url ON urls (original_url);`)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create index: %w", err)
-	}
+	// _, err = db.Exec(`CREATE UNIQUE INDEX idx_original_url ON urls (original_url);`)
+	// if err != nil {
+	// 	return nil, fmt.Errorf("failed to create index: %w", err)
+	// }
 
 	return &PostgresRepository{db: db, logger: log}, nil
 }
 
 func (p *PostgresRepository) Save(originalURL string) (string, error) {
-	var lastInsertID string
-	err := p.db.QueryRow(`
+	_, err := p.db.Exec(`
 	INSERT INTO urls (original_url)
-	 VALUES ($1) RETURNING id
-	  ON CONFLICT (original_url) DO NOTHING;`, originalURL).Scan(&lastInsertID)
+	 VALUES (\$1) ON CONFLICT (original_url) DO NOTHING;`, originalURL)
+
+	if err != nil {
+		return "", errors.New("error inserting URL" + err.Error())
+	}
+
+	// Получаем последний вставленный ID, если вставка произошла
+	var lastInsertID string
+	err = p.db.QueryRow(`
+	SELECT id FROM urls WHERE original_url = \$1;`, originalURL).Scan(&lastInsertID)
 
 	if err != nil {
 		var pgErr *pgconn.PgError
