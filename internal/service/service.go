@@ -42,7 +42,7 @@ func (s *URLService) Shorten(baseURL string, originalURL string) (string, error)
 		id, err := s.repo.Save(originalURL)
 
 		if errorsUtils.IsUniqueViolation(err) {
-			return "", fmt.Errorf("url %s is not unique: %w ", originalURL, err)
+			return baseURL + "/" + id, fmt.Errorf("url %s is not unique: %w ", originalURL, err)
 		}
 
 		if err == nil {

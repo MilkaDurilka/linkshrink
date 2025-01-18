@@ -5,12 +5,12 @@ import (
 	"errors"
 	"fmt"
 
+	"linkshrink/internal/utils"
 	errorsUtils "linkshrink/internal/utils/errors"
 	"linkshrink/internal/utils/logger"
 
-	"github.com/jackc/pgconn"
-	"github.com/jackc/pgerrcode"
 	_ "github.com/jackc/pgx/v5/stdlib"
+	"go.uber.org/zap"
 )
 
 type PingableRepository interface {
@@ -29,8 +29,9 @@ type TransactableRepository interface {
 }
 
 type PostgresRepository struct {
-	db     *sql.DB
-	logger logger.Logger
+	db          *sql.DB
+	logger      logger.Logger
+	idGenerator *utils.IDGenerator
 }
 
 func NewPostgresRepository(dsn string, log logger.Logger) (*PostgresRepository, error) {
@@ -42,50 +43,49 @@ func NewPostgresRepository(dsn string, log logger.Logger) (*PostgresRepository, 
 	// Создание таблицы, если она не существует
 	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS urls (
 		id INTEGER PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
+		uuid TEXT NOT NULL UNIQUE,
 		original_url VARCHAR(2048) NOT NULL
 	);`)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create table: %w", err)
 	}
 
-	// _, err = db.Exec(`CREATE UNIQUE INDEX idx_original_url ON urls (original_url);`)
-	// if err != nil {
-	// 	return nil, fmt.Errorf("failed to create index: %w", err)
-	// }
+	_, err = db.Exec(`CREATE UNIQUE INDEX IF NOT EXISTS idx_original_url ON urls (original_url);`)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create index: %w", err)
+	}
 
-	return &PostgresRepository{db: db, logger: log}, nil
+	return &PostgresRepository{db: db, logger: log, idGenerator: utils.NewIDGenerator()}, nil
 }
 
 func (p *PostgresRepository) Save(originalURL string) (string, error) {
-	// _, err := p.db.Exec(`
-	// INSERT INTO urls (original_url)
-	//  VALUES (\$1) ON CONFLICT (original_url) DO NOTHING;`, originalURL)
+	id := p.idGenerator.GenerateID()
 
-	_, err := p.db.Exec(`INSERT INTO urls (original_url) VALUES (\$1);`, originalURL)
-
-	if err != nil {
-		return "", errors.New("error inserting URL" + err.Error())
-	}
-
-	// Получаем последний вставленный ID, если вставка произошла
-	var lastInsertID string
-	err = p.db.QueryRow(`
-	SELECT id FROM urls WHERE original_url = \$1;`, originalURL).Scan(&lastInsertID)
+	p.logger.Info("sql params: %s", zap.String("id", id), zap.String("originalURL", originalURL))
+	_, err := p.db.Exec(`INSERT INTO urls (uuid, original_url) VALUES ($1, $2);`, id, originalURL)
 
 	if err != nil {
-		var pgErr *pgconn.PgError
-		if errors.As(err, &pgErr) {
-			if pgErr.Code == pgerrcode.UniqueViolation {
-				return lastInsertID, &errorsUtils.UniqueViolationError{Err: err}
-			} else {
-				return "", errors.New("Ошибка:" + pgErr.Message + ", Код:" + pgErr.Code)
-			}
+
+		// var pgErr *pgconn.PgError
+		// if errors.As(err, &pgErr) {
+		// 	if pgErr.Code == pgerrcode.UniqueViolation {
+		// TODO: да, плохо ( Но методом выше ошибка не ловится, не понимаю как исправить
+		if err.Error() == `ERROR: duplicate key value violates unique constraint "idx_original_url" (SQLSTATE 23505)` {
+			var lastInsertUUID string
+			// Получаем последний вставленный ID, если вставка произошла
+			err = p.db.QueryRow(`
+				SELECT uuid FROM urls WHERE original_url = $1;`, originalURL).Scan(&lastInsertUUID)
+
+			return lastInsertUUID, &errorsUtils.UniqueViolationError{Err: err}
+			// } else {
+			// 	return "", errors.New("Ошибка: " + pgErr.Message + ", Код: " + pgErr.Code)
+			// }
 		} else {
-			return "", errors.New("error inserting URL" + err.Error())
+			return "", errors.New("error inserting URL: " + err.Error())
 		}
 	}
 
-	return lastInsertID, nil
+	return id, nil
 }
 
 func (p *PostgresRepository) Find(id string) (string, error) {
