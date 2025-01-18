@@ -1,44 +1,44 @@
 package repository
 
 import (
+	"linkshrink/internal/utils"
 	"linkshrink/internal/utils/logger"
 	"sync"
 )
 
-type IMemoryStore interface {
-	Save(id string, originalURL string) error
-	Find(id string) (string, error)
-}
-
 type MemoryStore struct {
-	Store  map[string]string // Хранилище для хранения пар ID и оригинальных URL
-	mu     *sync.Mutex       // Мьютекс для обеспечения потокобезопасности
-	logger logger.Logger
+	Store       map[string]string // Хранилище для хранения пар ID и оригинальных URL
+	mu          *sync.Mutex       // Мьютекс для обеспечения потокобезопасности
+	logger      logger.Logger
+	idGenerator *utils.IDGenerator
 }
 
 // NewMemoryStore создает новый экземпляр MemoryStore.
 func NewMemoryStore(log logger.Logger) (*MemoryStore, error) {
 	repo := &MemoryStore{
-		Store:  make(map[string]string),
-		mu:     &sync.Mutex{},
-		logger: log,
+		Store:       make(map[string]string),
+		mu:          &sync.Mutex{},
+		logger:      log,
+		idGenerator: utils.NewIDGenerator(),
 	}
 
 	return repo, nil
 }
 
 // Save сохраняет оригинальный URL по ID.
-func (r *MemoryStore) Save(id string, originalURL string) error {
+func (r *MemoryStore) Save(originalURL string) (string, error) {
+	id := r.idGenerator.GenerateID()
+
 	r.mu.Lock() // Блокируем мьютекс
 	defer r.mu.Unlock()
 
 	_, ok := r.Store[id]
 	if !ok {
 		r.Store[id] = originalURL
-		return nil
+		return id, nil
 	}
 
-	return ErrIDAlreadyExists
+	return "", ErrIDAlreadyExists
 }
 
 // Find ищет оригинальный URL по ID.

@@ -6,6 +6,7 @@ import (
 	"io"
 	"linkshrink/internal/config"
 	"linkshrink/internal/service"
+	errorsUtils "linkshrink/internal/utils/errors"
 	"linkshrink/internal/utils/logger"
 	"net/http"
 
@@ -59,18 +60,24 @@ func (c *URLControllerImpl) ShortenURL(w http.ResponseWriter, r *http.Request) {
 	}()
 
 	shortURL, err := c.service.Shorten(c.cfg.BaseURL, string(url))
+	statusCode := http.StatusCreated
 	if err != nil {
 		// Проверяем тип ошибки и отправляем соответствующий ответ.
-		if errors.Is(err, service.ErrInvalidURL) {
-			http.Error(w, ErrInvalidURL, http.StatusBadRequest)
+		if errorsUtils.IsUniqueViolation(err) {
+			statusCode = http.StatusConflict
+		} else {
+			if errors.Is(err, service.ErrInvalidURL) {
+				http.Error(w, ErrInvalidURL, http.StatusBadRequest)
+				return
+			}
+
+			c.logger.Error("Error shortening URL", zap.Error(err))
+			http.Error(w, ErrInternal, http.StatusInternalServerError)
 			return
 		}
-		c.logger.Error("Error shortening URL", zap.Error(err))
-		http.Error(w, ErrInternal, http.StatusInternalServerError)
-		return
 	}
 
-	w.WriteHeader(http.StatusCreated)
+	w.WriteHeader(statusCode)
 	w.Header().Set("Content-Type", "text/plain")
 	var data = []byte(shortURL)
 	n, err := w.Write(data)

@@ -19,7 +19,7 @@ type URLData struct {
 }
 
 type URLRepository interface {
-	Save(id string, originalURL string) error
+	Save(originalURL string) (id string, err error)
 	Find(id string) (string, error)
 }
 

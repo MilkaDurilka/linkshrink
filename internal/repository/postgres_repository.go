@@ -42,41 +42,41 @@ func NewPostgresRepository(dsn string, log logger.Logger) (*PostgresRepository, 
 	// Создание таблицы, если она не существует
 	_, err = db.Exec(`CREATE TABLE IF NOT EXISTS urls (
 		id INTEGER PRIMARY KEY GENERATED ALWAYS AS IDENTITY,
-		uuid VARCHAR(100) NOT NULL UNIQUE,
 		original_url VARCHAR(2048) NOT NULL
 	);`)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create table: %w", err)
 	}
 
-	// _, err = db.Exec(`CREATE UNIQUE INDEX idx_original_url ON urls (original_url);`)
-	// if err != nil {
-	// 	return nil, fmt.Errorf("failed to create index: %w", err)
-	// }
+	_, err = db.Exec(`CREATE UNIQUE INDEX idx_original_url ON urls (original_url);`)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create index: %w", err)
+	}
 
 	return &PostgresRepository{db: db, logger: log}, nil
 }
 
-func (p *PostgresRepository) Save(id string, originalURL string) error {
-	// _, err := p.db.Exec("INSERT INTO urls (uuid, original_url)"+
-	// 	"VALUES ($1, $2)"+
-	// 	"ON CONFLICT (original_url) DO NOTHING;", id, originalURL)
-	_, err := p.db.Exec("INSERT INTO urls (uuid, original_url) VALUES ($1, $2)", id, originalURL)
+func (p *PostgresRepository) Save(originalURL string) (string, error) {
+	var lastInsertID string
+	err := p.db.QueryRow(`
+	INSERT INTO urls (original_url)
+	 VALUES ($1) RETURNING id
+	  ON CONFLICT (original_url) DO NOTHING;`, originalURL).Scan(&lastInsertID)
 
 	if err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) {
 			if pgErr.Code == pgerrcode.UniqueViolation {
-				return &errorsUtils.UniqueViolationError{Err: err}
+				return lastInsertID, &errorsUtils.UniqueViolationError{Err: err}
 			} else {
-				return errors.New("Ошибка:" + pgErr.Message + ", Код:" + pgErr.Code)
+				return "", errors.New("Ошибка:" + pgErr.Message + ", Код:" + pgErr.Code)
 			}
 		} else {
-			return errors.New("error inserting URL" + err.Error())
+			return "", errors.New("error inserting URL" + err.Error())
 		}
 	}
 
-	return nil
+	return lastInsertID, nil
 }
 
 func (p *PostgresRepository) Find(id string) (string, error) {

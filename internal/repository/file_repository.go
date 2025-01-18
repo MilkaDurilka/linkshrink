@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"io"
+	"linkshrink/internal/utils"
 	"linkshrink/internal/utils/logger"
 	"os"
 	"sync"
@@ -11,27 +12,22 @@ import (
 	"go.uber.org/zap"
 )
 
-type IFileStore interface {
-	Save(id string, originalURL string) error
-	Find(id string) (string, error)
-	LoadFromFile() error
-	SaveToFile() error
-}
-
 type FileStore struct {
-	memory   MemoryStore // Встраивание MemoryStore
-	mu       *sync.Mutex // Мьютекс для обеспечения потокобезопасности
-	logger   logger.Logger
-	filePath string
+	memory      MemoryStore // Встраивание MemoryStore
+	mu          *sync.Mutex // Мьютекс для обеспечения потокобезопасности
+	idGenerator *utils.IDGenerator
+	logger      logger.Logger
+	filePath    string
 }
 
 func NewFileStore(filePath string, log logger.Logger) (*FileStore, error) {
 	memory, _ := NewMemoryStore(log)
 	repo := &FileStore{
-		memory:   *memory,
-		filePath: filePath,
-		mu:       &sync.Mutex{},
-		logger:   log,
+		memory:      *memory,
+		filePath:    filePath,
+		mu:          &sync.Mutex{},
+		logger:      log,
+		idGenerator: utils.NewIDGenerator(),
 	}
 
 	if err := repo.LoadFromFile(); err != nil {
@@ -106,14 +102,19 @@ func (r *FileStore) SaveToFile() error {
 }
 
 // Save сохраняет оригинальный URL по ID и затем сохраняет в файл.
-func (r *FileStore) Save(id string, originalURL string) error {
+func (r *FileStore) Save(originalURL string) (string, error) {
 	r.mu.Lock() // Блокируем мьютекс
 	defer r.mu.Unlock()
+	id, err := r.memory.Save(originalURL)
 
-	if err := r.memory.Save(id, originalURL); err != nil {
-		return errors.New("не удалось сохранить в файл: " + err.Error())
+	if err != nil {
+		return "", errors.New("не удалось сохранить в файл: " + err.Error())
 	}
-	return r.SaveToFile() // Сохраняем в файл после сохранения в память
+
+	if err := r.SaveToFile(); err != nil { // Сохраняем в файл после сохранения в память
+		return "", errors.New("не удалось сохранить в файл: " + err.Error())
+	}
+	return id, nil
 }
 
 func (r *FileStore) Find(id string) (string, error) {

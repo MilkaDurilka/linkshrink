@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"linkshrink/internal/repository"
+	errorsUtils "linkshrink/internal/utils/errors"
 )
 
 var (
@@ -19,14 +20,12 @@ type IURLService interface {
 }
 
 type URLService struct {
-	repo        repository.URLRepository
-	idGenerator *IDGenerator
+	repo repository.URLRepository
 }
 
 func NewURLService(repo repository.URLRepository) *URLService {
 	return &URLService{ // Возвращаем новый сервис с заданным репозиторием
-		repo:        repo,
-		idGenerator: NewIDGenerator(),
+		repo: repo,
 	}
 }
 
@@ -40,8 +39,11 @@ func (s *URLService) Shorten(baseURL string, originalURL string) (string, error)
 	attempts := 0
 
 	for attempts < maxAttempts {
-		id := s.idGenerator.GenerateID()
-		err := s.repo.Save(id, originalURL)
+		id, err := s.repo.Save(originalURL)
+
+		if errorsUtils.IsUniqueViolation(err) {
+			return "", fmt.Errorf("url %s is not unique: %w ", originalURL, err)
+		}
 
 		if err == nil {
 			return baseURL + "/" + id, nil

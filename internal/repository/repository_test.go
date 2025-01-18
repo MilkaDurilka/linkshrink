@@ -48,11 +48,11 @@ func TestURLRepository_Save(t *testing.T) {
 			repo, err := repository.NewStore(&tt.cfg, logger)
 			require.NoError(t, err)
 			// Тестирование сохранения URL
-			err = repo.Save("abc123", "http://original.url")
+			id, err := repo.Save("http://original.url")
 			require.NoError(t, err)
 
 			// Проверяем, что URL сохранен
-			originalURL, err := repo.Find("abc123")
+			originalURL, err := repo.Find(id)
 			require.NoError(t, err)
 			assert.Equal(t, "http://original.url", originalURL)
 		})
@@ -67,11 +67,11 @@ func TestURLRepository_Find(t *testing.T) {
 			repo, err := repository.NewStore(&tt.cfg, logger)
 			require.NoError(t, err)
 			// Сохраняем URL для дальнейшего поиска
-			err = repo.Save("abc123", "http://original.url")
+			id, err := repo.Save("http://original.url")
 			require.NoError(t, err)
 
 			// Тестирование поиска существующего URL
-			originalURL, err := repo.Find("abc123")
+			originalURL, err := repo.Find(id)
 			require.NoError(t, err)
 			assert.Equal(t, "http://original.url", originalURL)
 
@@ -93,13 +93,15 @@ func TestURLRepository_ConcurrentAccess(t *testing.T) {
 
 			// Используем WaitGroup для ожидания завершения всех горутин
 			var wg sync.WaitGroup
+			var ids [100]string
 
 			// Запускаем несколько горутин для сохранения URL
 			for i := range utils.Intrange(0, 100) {
 				wg.Add(1)
-				go func(id int) {
+				go func(num int) {
 					defer wg.Done()
-					err := repo.Save(fmt.Sprintf("id%d", id), fmt.Sprintf("http://url%d.com", id))
+					id, err := repo.Save(fmt.Sprintf("http://url%d.com", num))
+					ids[num] = id
 					require.NoError(t, err)
 				}(i)
 			}
@@ -109,7 +111,7 @@ func TestURLRepository_ConcurrentAccess(t *testing.T) {
 
 			// Проверяем, что все URL были сохранены
 			for i := range utils.Intrange(0, 100) {
-				originalURL, err := repo.Find(fmt.Sprintf("id%d", i))
+				originalURL, err := repo.Find(ids[i])
 				require.NoError(t, err)
 				assert.Equal(t, fmt.Sprintf("http://url%d.com", i), originalURL)
 			}
@@ -127,19 +129,19 @@ func TestURLRepository_LoadFromFile(t *testing.T) {
 	repo, err := repository.NewStore(&cfg, logger)
 	require.NoError(t, err)
 	// Сохраняем несколько URL
-	_ = repo.Save("abc123", "http://original.url")
-	_ = repo.Save("def456", "http://another.url")
+	id1, _ := repo.Save("http://original.url")
+	id2, _ := repo.Save("http://another.url")
 
 	// Создаем новый репозиторий, который должен загрузить данные из файла
 	repo2, err := repository.NewStore(&cfg, logger)
 	require.NoError(t, err)
 
 	// Проверяем, что данные были загружены корректно
-	originalURL, err := repo2.Find("abc123")
+	originalURL, err := repo2.Find(id1)
 	require.NoError(t, err)
 	assert.Equal(t, "http://original.url", originalURL)
 
-	originalURL, err = repo2.Find("def456")
+	originalURL, err = repo2.Find(id2)
 	require.NoError(t, err)
 	assert.Equal(t, "http://another.url", originalURL)
 

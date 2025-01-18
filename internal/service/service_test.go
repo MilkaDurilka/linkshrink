@@ -20,13 +20,13 @@ type MockRepository struct {
 	mock.Mock // Включаем интерфейс репозитория
 }
 
-func (m *MockRepository) Save(id, originalURL string) error {
-	args := m.Called(id, originalURL)
+func (m *MockRepository) Save(originalURL string) (string, error) {
+	args := m.Called(originalURL)
 	err := args.Error(0) // Вызов метода, который возвращает ошибку
 	if err != nil {
-		return fmt.Errorf("failed to save: %w", err)
+		return "", fmt.Errorf("failed to save: %w", err)
 	}
-	return nil
+	return "123", nil
 }
 
 func (m *MockRepository) Find(id string) (string, error) {
@@ -59,7 +59,7 @@ func TestURLService_Shortcut(t *testing.T) {
 
 	originalURL := "http://example.com"
 	baseURL := "http://localhost:8080/"
-	mockRepo.On("Save", mock.Anything, originalURL).Return(nil)
+	mockRepo.On("Save", originalURL).Return(nil)
 
 	shortenedURL, err := srv.Shorten(baseURL, originalURL)
 
@@ -75,7 +75,7 @@ func TestURLService_Shortcut_InternalServer(t *testing.T) {
 
 	originalURL := "http://example.com"
 	baseURL := "http://localhost:8080/"
-	mockRepo.On("Save", mock.Anything, originalURL).Return(repository.ErrIDAlreadyExists)
+	mockRepo.On("Save", originalURL).Return(repository.ErrIDAlreadyExists)
 
 	shortenedURL, err := srv.Shorten(baseURL, originalURL)
 
