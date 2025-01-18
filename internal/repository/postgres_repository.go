@@ -65,7 +65,6 @@ func (p *PostgresRepository) Save(originalURL string) (string, error) {
 	_, err := p.db.Exec(`INSERT INTO urls (uuid, original_url) VALUES ($1, $2);`, id, originalURL)
 
 	if err != nil {
-
 		// var pgErr *pgconn.PgError
 		// if errors.As(err, &pgErr) {
 		// 	if pgErr.Code == pgerrcode.UniqueViolation {
