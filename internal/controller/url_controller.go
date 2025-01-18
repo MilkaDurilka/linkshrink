@@ -143,21 +143,28 @@ func (c *URLControllerImpl) ShortenURLJSON(w http.ResponseWriter, r *http.Reques
 
 	// Вызываем метод контроллера для сокращения URL.
 	shortURL, err := c.service.Shorten(c.cfg.BaseURL, req.URL)
+
+	statusCode := http.StatusCreated
 	if err != nil {
 		// Проверяем тип ошибки и отправляем соответствующий ответ.
-		if errors.Is(err, service.ErrInvalidURL) {
-			http.Error(w, ErrInvalidURL, http.StatusBadRequest)
+		if errorsUtils.IsUniqueViolation(err) {
+			statusCode = http.StatusConflict
+		} else {
+			// Проверяем тип ошибки и отправляем соответствующий ответ.
+			if errors.Is(err, service.ErrInvalidURL) {
+				http.Error(w, ErrInvalidURL, http.StatusBadRequest)
+				return
+			}
+			c.logger.Error("Error shortening URL", zap.Error(err))
+			http.Error(w, ErrInternal, http.StatusInternalServerError)
 			return
 		}
-		c.logger.Error("Error shortening URL", zap.Error(err))
-		http.Error(w, ErrInternal, http.StatusInternalServerError)
-		return
 	}
 
 	// Формируем ответ.
 	resp := ShortenResponse{Result: shortURL}
 	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
+	w.WriteHeader(statusCode)
 	if err := json.NewEncoder(w).Encode(resp); err != nil {
 		c.logger.Error("Error on encoding", zap.Error(err))
 		http.Error(w, ErrInternal, http.StatusInternalServerError)
