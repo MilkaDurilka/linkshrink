@@ -1,11 +1,13 @@
 package controller
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"io"
 	"linkshrink/internal/config"
 	"linkshrink/internal/service"
+	"linkshrink/internal/utils"
 	errorsUtils "linkshrink/internal/utils/errors"
 	"linkshrink/internal/utils/logger"
 	"net/http"
@@ -15,10 +17,10 @@ import (
 )
 
 type URLController interface {
-	ShortenURL(w http.ResponseWriter, r *http.Request)
+	ShortenURL(ctx context.Context, w http.ResponseWriter, r *http.Request)
 	RedirectURL(w http.ResponseWriter, r *http.Request)
-	ShortenURLJSON(w http.ResponseWriter, r *http.Request)
-	BatchShortenURL(w http.ResponseWriter, r *http.Request)
+	ShortenURLJSON(ctx context.Context, w http.ResponseWriter, r *http.Request)
+	BatchShortenURL(ctx context.Context, w http.ResponseWriter, r *http.Request)
 }
 
 type URLControllerImpl struct {
@@ -41,12 +43,16 @@ const (
 )
 
 // NewURLController создает новый экземпляр URLController.
-func NewURLController(cfg *config.Config, srv service.IURLService, log logger.Logger) *URLControllerImpl {
+func NewURLController(
+	cfg *config.Config,
+	srv service.IURLService,
+	log logger.Logger,
+) *URLControllerImpl {
 	return &URLControllerImpl{service: srv, cfg: cfg, logger: log}
 }
 
 // ShortenURL обрабатывает запрос на сокращение URL.
-func (c *URLControllerImpl) ShortenURL(w http.ResponseWriter, r *http.Request) {
+func (c *URLControllerImpl) ShortenURL(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	url, err := io.ReadAll(r.Body)
 	if err != nil || len(url) == 0 {
 		http.Error(w, ErrInvalidURL, http.StatusBadRequest)
@@ -59,7 +65,7 @@ func (c *URLControllerImpl) ShortenURL(w http.ResponseWriter, r *http.Request) {
 		}
 	}()
 
-	shortURL, err := c.service.Shorten(c.cfg.BaseURL, string(url))
+	shortURL, err := c.service.Shorten(ctx, c.cfg.BaseURL, string(url))
 	statusCode := http.StatusCreated
 	if err != nil {
 		// Проверяем тип ошибки и отправляем соответствующий ответ.
@@ -126,7 +132,7 @@ func (c *URLControllerImpl) RedirectURL(w http.ResponseWriter, r *http.Request) 
 	}
 }
 
-func (c *URLControllerImpl) ShortenURLJSON(w http.ResponseWriter, r *http.Request) {
+func (c *URLControllerImpl) ShortenURLJSON(ctx context.Context, w http.ResponseWriter, r *http.Request) {
 	var req ShortenRequest
 
 	// Декодируем JSON из тела запроса.
@@ -142,7 +148,7 @@ func (c *URLControllerImpl) ShortenURLJSON(w http.ResponseWriter, r *http.Reques
 	}
 
 	// Вызываем метод контроллера для сокращения URL.
-	shortURL, err := c.service.Shorten(c.cfg.BaseURL, req.URL)
+	shortURL, err := c.service.Shorten(ctx, c.cfg.BaseURL, req.URL)
 
 	statusCode := http.StatusCreated
 	if err != nil {
@@ -171,18 +177,8 @@ func (c *URLControllerImpl) ShortenURLJSON(w http.ResponseWriter, r *http.Reques
 	}
 }
 
-type BatchShortenRequest struct {
-	CorrelationID string `json:"correlation_id"`
-	OriginalURL   string `json:"original_url"`
-}
-
-type BatchShortenResponse struct {
-	CorrelationID string `json:"correlation_id"`
-	ShortURL      string `json:"short_url"`
-}
-
-func (c *URLControllerImpl) BatchShortenURL(w http.ResponseWriter, r *http.Request) {
-	var requests []BatchShortenRequest
+func (c *URLControllerImpl) BatchShortenURL(ctx context.Context, w http.ResponseWriter, r *http.Request) {
+	var requests []utils.BatchShortenParam
 
 	// Декодируем JSON из тела запроса.
 	if err := json.NewDecoder(r.Body).Decode(&requests); err != nil {
@@ -196,50 +192,10 @@ func (c *URLControllerImpl) BatchShortenURL(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	// Создаем срез для хранения ответов.
-	responses := make([]BatchShortenResponse, 0, len(requests))
+	responses, err := c.service.BatchShorten(ctx, c.cfg.BaseURL, requests)
 
-	// Начинаем транзакцию для сохранения в базе данных.
-	tx, err := c.service.BeginTransaction()
 	if err != nil {
-		c.logger.Error("Error starting transaction", zap.Error(err))
-		http.Error(w, ErrInternal, http.StatusInternalServerError)
-		return
-	}
-
-	defer func() {
-		if err := tx.Rollback(); err != nil {
-			// Логируем ошибку, если необходимо
-			c.logger.Error("failed to rollback transaction", zap.Error(err))
-		}
-	}()
-
-	for _, req := range requests {
-		if len(req.OriginalURL) == 0 {
-			http.Error(w, ErrInvalidURL, http.StatusBadRequest)
-			return
-		}
-
-		shortURL, err := c.service.Shorten(c.cfg.BaseURL, req.OriginalURL)
-		if err != nil {
-			if errors.Is(err, service.ErrInvalidURL) {
-				http.Error(w, ErrInvalidURL, http.StatusBadRequest)
-				return
-			}
-			c.logger.Error("Error shortening URL", zap.Error(err))
-			http.Error(w, ErrInternal, http.StatusInternalServerError)
-			return
-		}
-
-		responses = append(responses, BatchShortenResponse{
-			CorrelationID: req.CorrelationID,
-			ShortURL:      shortURL,
-		})
-	}
-
-	// Подтверждаем транзакцию.
-	if err := tx.Commit(); err != nil {
-		c.logger.Error("Error committing transaction", zap.Error(err))
+		c.logger.Error("Error batch shortening URL", zap.Error(err))
 		http.Error(w, ErrInternal, http.StatusInternalServerError)
 		return
 	}

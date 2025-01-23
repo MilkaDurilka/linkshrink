@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"io"
@@ -102,10 +103,10 @@ func (r *FileStore) SaveToFile() error {
 }
 
 // Save сохраняет оригинальный URL по ID и затем сохраняет в файл.
-func (r *FileStore) Save(originalURL string) (string, error) {
+func (r *FileStore) Save(ctx context.Context, originalURL string) (string, error) {
 	r.mu.Lock() // Блокируем мьютекс
 	defer r.mu.Unlock()
-	id, err := r.memory.Save(originalURL)
+	id, err := r.memory.Save(ctx, originalURL)
 
 	if err != nil {
 		return "", errors.New("не удалось сохранить в файл: " + err.Error())

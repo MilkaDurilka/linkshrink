@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -18,23 +19,13 @@ type PingableRepository interface {
 	Ping() error
 }
 
-type Transaction interface {
-	Commit() error
-	Rollback() error
-}
-
-type TransactableRepository interface {
-	URLRepository
-	Begin() (*sql.Tx, error)
-}
-
 type PostgresRepository struct {
 	db          *sql.DB
 	logger      logger.Logger
 	idGenerator *utils.IDGenerator
 }
 
-func NewPostgresRepository(dsn string, log logger.Logger) (*PostgresRepository, error) {
+func NewPostgresRepository(ctx context.Context, dsn string, log logger.Logger) (*PostgresRepository, error) {
 	db, err := sql.Open("pgx", dsn)
 	if err != nil {
 		return nil, fmt.Errorf("failed to connect to database: %w", err)
@@ -58,11 +49,18 @@ func NewPostgresRepository(dsn string, log logger.Logger) (*PostgresRepository, 
 	return &PostgresRepository{db: db, logger: log, idGenerator: utils.NewIDGenerator()}, nil
 }
 
-func (p *PostgresRepository) Save(originalURL string) (string, error) {
+func (p *PostgresRepository) Save(ctx context.Context, originalURL string) (string, error) {
 	id := p.idGenerator.GenerateID()
 
 	p.logger.Info("sql params: %s", zap.String("id", id), zap.String("originalURL", originalURL))
-	_, err := p.db.Exec(`INSERT INTO urls (uuid, original_url) VALUES ($1, $2);`, id, originalURL)
+	tx, ok := ctx.Value(utils.TxKey).(*sql.Tx)
+
+	var err error
+	if ok {
+		_, err = tx.Exec(`INSERT INTO urls (uuid, original_url) VALUES ($1, $2);`, id, originalURL)
+	} else {
+		_, err = p.db.Exec(`INSERT INTO urls (uuid, original_url) VALUES ($1, $2);`, id, originalURL)
+	}
 
 	if err != nil {
 		// var pgErr *pgconn.PgError
@@ -113,8 +111,8 @@ func (p *PostgresRepository) Ping() error {
 	return nil
 }
 
-func (p *PostgresRepository) Begin() (*sql.Tx, error) {
-	transaction, err := p.db.Begin()
+func (p *PostgresRepository) BeginTx(ctx context.Context, txOptions *sql.TxOptions) (*sql.Tx, error) {
+	transaction, err := p.db.BeginTx(ctx, txOptions)
 	if err != nil {
 		return nil, errors.New("Ошибка при начале транзакции в базе данных:" + err.Error())
 	}

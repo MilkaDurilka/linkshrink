@@ -1,6 +1,7 @@
 package repository_test
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"os"
@@ -42,13 +43,13 @@ var tests = []struct {
 func TestURLRepository_Save(t *testing.T) {
 	setup()
 	logger := zaptest.NewLogger(t)
-
+	ctx := context.Background()
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			repo, err := repository.NewStore(&tt.cfg, logger)
+			repo, _, err := repository.NewStore(ctx, &tt.cfg, logger)
 			require.NoError(t, err)
 			// Тестирование сохранения URL
-			id, err := repo.Save("http://original.url")
+			id, err := repo.Save(ctx, "http://original.url")
 			require.NoError(t, err)
 
 			// Проверяем, что URL сохранен
@@ -62,12 +63,13 @@ func TestURLRepository_Save(t *testing.T) {
 func TestURLRepository_Find(t *testing.T) {
 	setup()
 	logger := zaptest.NewLogger(t)
+	ctx := context.Background()
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			repo, err := repository.NewStore(&tt.cfg, logger)
+			repo, _, err := repository.NewStore(ctx, &tt.cfg, logger)
 			require.NoError(t, err)
 			// Сохраняем URL для дальнейшего поиска
-			id, err := repo.Save("http://original.url")
+			id, err := repo.Save(ctx, "http://original.url")
 			require.NoError(t, err)
 
 			// Тестирование поиска существующего URL
@@ -86,9 +88,10 @@ func TestURLRepository_Find(t *testing.T) {
 func TestURLRepository_ConcurrentAccess(t *testing.T) {
 	setup()
 	logger := zaptest.NewLogger(t)
+	ctx := context.Background()
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			repo, err := repository.NewStore(&tt.cfg, logger)
+			repo, _, err := repository.NewStore(ctx, &tt.cfg, logger)
 			require.NoError(t, err)
 
 			// Используем WaitGroup для ожидания завершения всех горутин
@@ -100,7 +103,7 @@ func TestURLRepository_ConcurrentAccess(t *testing.T) {
 				wg.Add(1)
 				go func(num int) {
 					defer wg.Done()
-					id, err := repo.Save(fmt.Sprintf("http://url%d.com", num))
+					id, err := repo.Save(ctx, fmt.Sprintf("http://url%d.com", num))
 					ids[num] = id
 					require.NoError(t, err)
 				}(i)
@@ -125,15 +128,16 @@ func TestURLRepository_LoadFromFile(t *testing.T) {
 	cfg := config.Config{
 		FileStoragePath: testFilePath,
 	}
+	ctx := context.Background()
 
-	repo, err := repository.NewStore(&cfg, logger)
+	repo, _, err := repository.NewStore(ctx, &cfg, logger)
 	require.NoError(t, err)
 	// Сохраняем несколько URL
-	id1, _ := repo.Save("http://original.url")
-	id2, _ := repo.Save("http://another.url")
+	id1, _ := repo.Save(ctx, "http://original.url")
+	id2, _ := repo.Save(ctx, "http://another.url")
 
 	// Создаем новый репозиторий, который должен загрузить данные из файла
-	repo2, err := repository.NewStore(&cfg, logger)
+	repo2, _, err := repository.NewStore(ctx, &cfg, logger)
 	require.NoError(t, err)
 
 	// Проверяем, что данные были загружены корректно

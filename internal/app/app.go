@@ -1,17 +1,19 @@
 package app
 
 import (
+	"context"
 	"fmt"
 	"linkshrink/internal/config"
 	"linkshrink/internal/controller"
 	"linkshrink/internal/handlers"
 	"linkshrink/internal/repository"
 	"linkshrink/internal/service"
+	"linkshrink/internal/utils"
 
 	"go.uber.org/zap"
 )
 
-func Run() error {
+func Run(ctx context.Context) error {
 	// Создаем логгер
 	logger, err := zap.NewProduction()
 	if err != nil {
@@ -28,7 +30,10 @@ func Run() error {
 		return fmt.Errorf("failed to initialize config: %w", err)
 	}
 
-	urlRepo, err := repository.NewStore(cfg, logger)
+	urlRepo, txManager, err := repository.NewStore(ctx, cfg, logger)
+
+	ctx = context.WithValue(ctx, utils.TxManager, txManager)
+
 	if err != nil {
 		return fmt.Errorf("failed to connect to repository: %w", err)
 	}
@@ -42,7 +47,7 @@ func Run() error {
 	pingController := controller.NewPingHandler(urlRepo, pinggLogger)
 
 	handlersLogger := logger.With(zap.String("component", "handlers"))
-	err = handlers.StartServer(cfg, urlController, pingController, handlersLogger)
+	err = handlers.StartServer(ctx, cfg, urlController, pingController, handlersLogger)
 
 	if err != nil {
 		return fmt.Errorf("failed to start serve: %w", err)

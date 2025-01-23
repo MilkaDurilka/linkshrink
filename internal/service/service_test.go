@@ -1,6 +1,7 @@
 package service_test
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"testing"
@@ -20,7 +21,7 @@ type MockRepository struct {
 	mock.Mock // Включаем интерфейс репозитория
 }
 
-func (m *MockRepository) Save(originalURL string) (string, error) {
+func (m *MockRepository) Save(ctx context.Context, originalURL string) (string, error) {
 	args := m.Called(originalURL)
 	err := args.Error(0) // Вызов метода, который возвращает ошибку
 	if err != nil {
@@ -55,13 +56,14 @@ func (m *MockRepository) SaveToFile() error {
 // TestURLService_Shortcut тестирует метод Shorten.
 func TestURLService_Shortcut(t *testing.T) {
 	mockRepo := new(MockRepository)
+	ctx := context.Background()
 	srv := service.NewURLService(mockRepo)
 
 	originalURL := "http://example.com"
 	baseURL := "http://localhost:8080/"
 	mockRepo.On("Save", originalURL).Return(nil)
 
-	shortenedURL, err := srv.Shorten(baseURL, originalURL)
+	shortenedURL, err := srv.Shorten(ctx, baseURL, originalURL)
 
 	require.NoError(t, err)
 	assert.Contains(t, shortenedURL, "http://localhost:8080/") // Проверяем, что URL содержит базовый адрес
@@ -71,13 +73,14 @@ func TestURLService_Shortcut(t *testing.T) {
 // TestURLService_Shortcut тестирует метод Shorten c превышением попыток сгенерировать id.
 func TestURLService_Shortcut_InternalServer(t *testing.T) {
 	mockRepo := new(MockRepository)
+	ctx := context.Background()
 	srv := service.NewURLService(mockRepo)
 
 	originalURL := "http://example.com"
 	baseURL := "http://localhost:8080/"
 	mockRepo.On("Save", originalURL).Return(repository.ErrIDAlreadyExists)
 
-	shortenedURL, err := srv.Shorten(baseURL, originalURL)
+	shortenedURL, err := srv.Shorten(ctx, baseURL, originalURL)
 
 	assert.True(t, errors.Is(err, service.ErrInternalServer), "expected ErrInternalServer")
 	assert.Empty(t, shortenedURL)
@@ -86,10 +89,11 @@ func TestURLService_Shortcut_InternalServer(t *testing.T) {
 // TestURLService_Shortcut_InvalidURL тестирует метод Shorten с недопустимым URL.
 func TestURLService_Shortcut_InvalidURL(t *testing.T) {
 	mockRepo := new(MockRepository)
+	ctx := context.Background()
 	srv := service.NewURLService(mockRepo)
 	baseURL := "http://localhost:8080/"
 
-	shortenedURL, err := srv.Shorten(baseURL, "")
+	shortenedURL, err := srv.Shorten(ctx, baseURL, "")
 	assert.True(t, errors.Is(err, service.ErrInvalidURL), "expected ErrInvalidURL")
 	assert.Empty(t, shortenedURL)
 }

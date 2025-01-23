@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"context"
 	"linkshrink/internal/utils"
 	"linkshrink/internal/utils/logger"
 	"sync"
@@ -26,7 +27,7 @@ func NewMemoryStore(log logger.Logger) (*MemoryStore, error) {
 }
 
 // Save сохраняет оригинальный URL по ID.
-func (r *MemoryStore) Save(originalURL string) (string, error) {
+func (r *MemoryStore) Save(ctx context.Context, originalURL string) (string, error) {
 	id := r.idGenerator.GenerateID()
 
 	r.mu.Lock() // Блокируем мьютекс

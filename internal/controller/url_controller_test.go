@@ -2,6 +2,7 @@ package controller
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"errors"
 	"io"
@@ -10,8 +11,8 @@ import (
 	"testing"
 
 	"linkshrink/internal/config"
-	"linkshrink/internal/repository"
 	"linkshrink/internal/service"
+	"linkshrink/internal/utils"
 
 	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/assert"
@@ -25,7 +26,7 @@ type MockURLService struct {
 	mock.Mock
 }
 
-func (m *MockURLService) Shorten(baseURL string, url string) (string, error) {
+func (m *MockURLService) Shorten(_ context.Context, baseURL string, url string) (string, error) {
 	args := m.Called(baseURL, url)
 	return args.String(0), args.Error(1)
 }
@@ -35,18 +36,21 @@ func (m *MockURLService) GetOriginalURL(id string) (string, error) {
 	return args.String(0), args.Error(1)
 }
 
-func (m *MockURLService) BeginTransaction() (repository.Transaction, error) {
-	args := m.Called()
-	tx, ok := args.Get(0).(repository.Transaction)
+func (m *MockURLService) BatchShorten(
+	_ context.Context,
+	baseURL string,
+	params []utils.BatchShortenParam,
+) ([]utils.BatchShortenReturnParam, error) {
+	args := m.Called(baseURL, params)
+	result, ok := args[0].([]utils.BatchShortenReturnParam)
 	if !ok {
-		return nil, errors.New("failed to cast to ITransaction")
+		return nil, errors.New("failed to assert type to []utils.BatchShortenReturnParam")
 	}
-	err := args.Error(1)
-	if err != nil {
-		return nil, errors.New("begin transaction error")
+	if err := args.Error(1); err != nil {
+		return result, errors.New("error occurred")
 	}
 
-	return tx, nil
+	return result, nil
 }
 
 var cfg = config.Config{
@@ -98,7 +102,7 @@ func TestShortenURL(t *testing.T) {
 	}
 
 	logger := zaptest.NewLogger(t)
-
+	ctx := context.Background()
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockService := new(MockURLService)
@@ -111,7 +115,7 @@ func TestShortenURL(t *testing.T) {
 			req := httptest.NewRequest(http.MethodPost, "/shorten", bytes.NewBufferString(tt.body))
 			rr := httptest.NewRecorder()
 
-			controller.ShortenURL(rr, req)
+			controller.ShortenURL(ctx, rr, req)
 
 			res := rr.Result()
 			assert.Equal(t, tt.expectedCode, res.StatusCode)
@@ -172,7 +176,7 @@ func TestShortenURLJSON(t *testing.T) {
 	}
 
 	logger := zaptest.NewLogger(t)
-
+	ctx := context.Background()
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockService := new(MockURLService)
@@ -186,7 +190,7 @@ func TestShortenURLJSON(t *testing.T) {
 			req := httptest.NewRequest(http.MethodPost, "/shorten", bytes.NewBuffer(requestBody))
 			rr := httptest.NewRecorder()
 
-			controller.ShortenURLJSON(rr, req)
+			controller.ShortenURLJSON(ctx, rr, req)
 
 			res := rr.Result()
 			assert.Equal(t, tt.expectedCode, res.StatusCode)
@@ -245,7 +249,6 @@ func TestRedirectURL(t *testing.T) {
 	}
 
 	logger := zaptest.NewLogger(t)
-
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			mockService := new(MockURLService)
