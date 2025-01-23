@@ -15,17 +15,19 @@ import (
 )
 
 func InitMiddlewares(log logger.Logger) func(http.Handler) http.Handler {
+	gzipReqLogger := log.With(zap.String("component", "GzipRequestMiddleware"))
+	gzipResLogger := log.With(zap.String("component", "GzipResponseMiddleware"))
+	loggingLogger := log.With(zap.String("component", "loggingMiddleware"))
+
 	return chain(
-		GzipRequestMiddleware(log),
-		GzipResponseMiddleware(log),
-		loggingMiddleware(log),
+		GzipRequestMiddleware(gzipReqLogger),
+		GzipResponseMiddleware(gzipResLogger),
+		loggingMiddleware(loggingLogger),
 	)
 }
 
 func loggingMiddleware(log logger.Logger) mux.MiddlewareFunc {
 	return func(next http.Handler) http.Handler {
-		componentLogger := log.With(zap.String("component", "loggingMiddleware"))
-
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			start := time.Now()
 
@@ -36,7 +38,7 @@ func loggingMiddleware(log logger.Logger) mux.MiddlewareFunc {
 			duration := time.Since(start)
 
 			// Логируем информацию о запросе и ответе
-			componentLogger.Info("Request",
+			log.Info("Request",
 				zap.String("method", r.Method),
 				zap.String("uri", r.RequestURI),
 				zap.Int("status", lrw.status),
@@ -73,7 +75,6 @@ func (lrw *LoggingResponseWriter) Write(b []byte) (int, error) {
 // GzipRequestMiddleware для обработки входящих сжатых запросов.
 func GzipRequestMiddleware(log logger.Logger) mux.MiddlewareFunc {
 	return func(next http.Handler) http.Handler {
-		componentLogger := log.With(zap.String("component", "GzipRequestMiddleware"))
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			if r.Header.Get("Content-Encoding") == "gzip" {
 				reader, err := gzip.NewReader(r.Body)
@@ -84,7 +85,7 @@ func GzipRequestMiddleware(log logger.Logger) mux.MiddlewareFunc {
 
 				defer func() {
 					if err := reader.Close(); err != nil {
-						componentLogger.Error("Error closing reader", zap.Error(err))
+						log.Error("Error closing reader", zap.Error(err))
 						http.Error(w, "Internal server error", http.StatusInternalServerError)
 					}
 				}()
@@ -110,7 +111,6 @@ const (
 // GzipResponseMiddleware для сжатия ответов.
 func GzipResponseMiddleware(log logger.Logger) mux.MiddlewareFunc {
 	return func(next http.Handler) http.Handler {
-		componentLogger := log.With(zap.String("component", "GzipResponseMiddleware"))
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			// Проверяем наличие "gzip" в заголовке Accept-Encoding
 			if strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") &&
@@ -135,7 +135,7 @@ func GzipResponseMiddleware(log logger.Logger) mux.MiddlewareFunc {
 
 				defer func() {
 					if err := gzipWriter.Close(); err != nil {
-						componentLogger.Error("Error closing gzipWriter", zap.Error(err))
+						log.Error("Error closing gzipWriter", zap.Error(err))
 						http.Error(w, "Internal server error", http.StatusInternalServerError)
 					}
 				}()
@@ -155,7 +155,7 @@ func GzipResponseMiddleware(log logger.Logger) mux.MiddlewareFunc {
 				// Записываем сжатый ответ
 				_, err := buf.WriteTo(w)
 				if err != nil {
-					componentLogger.Error("Error writing compressed response", zap.Error(err))
+					log.Error("Error writing compressed response", zap.Error(err))
 					return
 				}
 				return

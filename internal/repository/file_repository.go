@@ -1,10 +1,11 @@
-package filestore
+package repository
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"io"
-	memorystore "linkshrink/internal/repository/memory_store"
+	"linkshrink/internal/utils"
 	"linkshrink/internal/utils/logger"
 	"os"
 	"sync"
@@ -12,46 +13,48 @@ import (
 	"go.uber.org/zap"
 )
 
-type URLData struct {
-	UUID        string `json:"uuid"`
-	OriginalURL string `json:"original_url"`
-}
-
-type IFileStore interface {
-	Save(id string, originalURL string) error
-	Find(id string) (string, error)
-	LoadFromFile() error
-	SaveToFile() error
-}
-
 type FileStore struct {
-	memory   memorystore.MemoryStore // Встраивание MemoryStore
-	mu       *sync.Mutex             // Мьютекс для обеспечения потокобезопасности
-	logger   logger.Logger
-	filePath string
+	memory      MemoryStore // Встраивание MemoryStore
+	mu          *sync.Mutex // Мьютекс для обеспечения потокобезопасности
+	idGenerator *utils.IDGenerator
+	logger      logger.Logger
+	filePath    string
 }
 
-func NewFileStore(filePath string, log logger.Logger) *FileStore {
-	componentLogger := log.With(zap.String("component", "FileStore"))
+func NewFileStore(filePath string, log logger.Logger) (*FileStore, error) {
+	memory, _ := NewMemoryStore(log)
 	repo := &FileStore{
-		memory:   *memorystore.NewMemoryStore(log),
-		filePath: filePath,
-		mu:       &sync.Mutex{},
-		logger:   componentLogger,
+		memory:      *memory,
+		filePath:    filePath,
+		mu:          &sync.Mutex{},
+		logger:      log,
+		idGenerator: utils.NewIDGenerator(),
 	}
 
 	if err := repo.LoadFromFile(); err != nil {
-		componentLogger.Error("Ошибка при загрузке из файла", zap.Error(err))
+		return nil, err
 	}
 
-	return repo
+	return repo, nil
 }
 
 // LoadFromFile загружает данные из файла в репозиторий.
 func (r *FileStore) LoadFromFile() error {
 	file, err := os.Open(r.filePath)
 	if err != nil {
-		return errors.New("не удалось открыть файл: " + err.Error())
+		file, err = os.Create(r.filePath)
+		if err != nil {
+			return errors.New("не удалось прочитать файл: " + err.Error())
+		}
+		const filePermission = 0o600
+		data, err := json.Marshal([]string{})
+		if err != nil {
+			return errors.New("не удалось прочитать файл: " + err.Error())
+		}
+		err = os.WriteFile(r.filePath, data, filePermission)
+		if err != nil {
+			r.logger.Error("Ошибка при редактировании файла", zap.Error(err))
+		}
 	}
 	defer func() {
 		if err := file.Close(); err != nil {
@@ -100,14 +103,19 @@ func (r *FileStore) SaveToFile() error {
 }
 
 // Save сохраняет оригинальный URL по ID и затем сохраняет в файл.
-func (r *FileStore) Save(id string, originalURL string) error {
+func (r *FileStore) Save(ctx context.Context, originalURL string) (string, error) {
 	r.mu.Lock() // Блокируем мьютекс
 	defer r.mu.Unlock()
+	id, err := r.memory.Save(ctx, originalURL)
 
-	if err := r.memory.Save(id, originalURL); err != nil {
-		return errors.New("не удалось сохранить в файл: " + err.Error())
+	if err != nil {
+		return "", errors.New("не удалось сохранить в файл: " + err.Error())
 	}
-	return r.SaveToFile() // Сохраняем в файл после сохранения в память
+
+	if err := r.SaveToFile(); err != nil { // Сохраняем в файл после сохранения в память
+		return "", errors.New("не удалось сохранить в файл: " + err.Error())
+	}
+	return id, nil
 }
 
 func (r *FileStore) Find(id string) (string, error) {

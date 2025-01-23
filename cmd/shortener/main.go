@@ -1,12 +1,15 @@
 package main
 
 import (
+	"context"
 	"linkshrink/internal/app"
 	"log"
 )
 
 func main() {
-	if err := app.Run(); err != nil {
+	ctx := context.Background()
+
+	if err := app.Run(ctx); err != nil {
 		log.Fatalf("Error starting server: %v", err)
 	}
 }

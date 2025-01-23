@@ -1,10 +1,13 @@
 package repository
 
 import (
+	"context"
 	"errors"
-	filestore "linkshrink/internal/repository/file_store"
-	memorystore "linkshrink/internal/repository/memory_store"
+	"linkshrink/internal/config"
 	"linkshrink/internal/utils/logger"
+	"linkshrink/internal/utils/transaction"
+
+	"go.uber.org/zap"
 )
 
 var (
@@ -17,19 +20,29 @@ type URLData struct {
 	OriginalURL string `json:"original_url"`
 }
 
-type IURLRepository interface {
-	Save(id string, originalURL string) error
+type URLRepository interface {
+	Save(ctx context.Context, originalURL string) (id string, err error)
 	Find(id string) (string, error)
 }
 
-type URLRepository struct {
-	Store map[string]string // Хранилище для хранения пар ID и оригинальных URL
-}
-
 // NewStore создает новый экземпляр URLRepository.
-func NewStore(storeType string, filePath string, log logger.Logger) IURLRepository {
-	if storeType == "file" {
-		return filestore.NewFileStore(filePath, log)
+func NewStore(
+	ctx context.Context,
+	cfg *config.Config,
+	log logger.Logger,
+) (URLRepository, transaction.TxManager, error) {
+	if cfg.DataBaseDSN != "" {
+		dbLogger := log.With(zap.String("component", "DBStore"))
+		pgRep, err := NewPostgresRepository(ctx, cfg.DataBaseDSN, dbLogger)
+		txManager := transaction.NewTransactionManager(pgRep.db)
+		return pgRep, txManager, err
 	}
-	return memorystore.NewMemoryStore(log)
+	if cfg.FileStoragePath != "" {
+		fileLogger := log.With(zap.String("component", "FileStore"))
+		fileRep, err := NewFileStore(cfg.FileStoragePath, fileLogger)
+		return fileRep, nil, err
+	}
+	memoryLogger := log.With(zap.String("component", "MemoryStore"))
+	memoryRep, err := NewMemoryStore(memoryLogger)
+	return memoryRep, nil, err
 }

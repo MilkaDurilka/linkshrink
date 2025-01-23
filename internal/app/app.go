@@ -1,17 +1,19 @@
 package app
 
 import (
+	"context"
 	"fmt"
 	"linkshrink/internal/config"
 	"linkshrink/internal/controller"
 	"linkshrink/internal/handlers"
 	"linkshrink/internal/repository"
 	"linkshrink/internal/service"
+	"linkshrink/internal/utils"
 
 	"go.uber.org/zap"
 )
 
-func Run() error {
+func Run(ctx context.Context) error {
 	// Создаем логгер
 	logger, err := zap.NewProduction()
 	if err != nil {
@@ -25,21 +27,29 @@ func Run() error {
 
 	cfg, err := config.InitConfig()
 	if err != nil {
-		logger.Error("Error initializing config", zap.Error(err))
 		return fmt.Errorf("failed to initialize config: %w", err)
 	}
 
-	// Создаем экземпляр репозитория для хранения URL
-	urlRepo := repository.NewStore("file", cfg.FileStoragePath, logger)
+	urlRepo, txManager, err := repository.NewStore(ctx, cfg, logger)
+
+	ctx = context.WithValue(ctx, utils.TxManager, txManager)
+
+	if err != nil {
+		return fmt.Errorf("failed to connect to repository: %w", err)
+	}
 
 	urlService := service.NewURLService(urlRepo)
 
-	urlController := controller.NewURLController(cfg, urlService, logger)
+	urlLogger := logger.With(zap.String("component", "NewURLController"))
+	urlController := controller.NewURLController(cfg, urlService, urlLogger)
 
-	err = handlers.StartServer(cfg, urlController, logger)
+	pinggLogger := logger.With(zap.String("component", "NewPingHandler"))
+	pingController := controller.NewPingHandler(urlRepo, pinggLogger)
+
+	handlersLogger := logger.With(zap.String("component", "handlers"))
+	err = handlers.StartServer(ctx, cfg, urlController, pingController, handlersLogger)
 
 	if err != nil {
-		logger.Error("Error on start serve", zap.Error(err))
 		return fmt.Errorf("failed to start serve: %w", err)
 	}
 
