@@ -7,6 +7,7 @@ import (
 
 	"linkshrink/internal/repository"
 	"linkshrink/internal/service"
+	"linkshrink/internal/utils"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/mock"
@@ -27,6 +28,16 @@ func (m *MockRepository) Save(originalURL string) (string, error) {
 		return "", fmt.Errorf("failed to save: %w", err)
 	}
 	return "123", nil
+}
+
+func (m *MockRepository) SaveAll(param []utils.BatchShortenParam) ([]repository.SaveAllReturn, error) {
+	args := m.Called(param)
+	err := args.Error(0) // Вызов метода, который возвращает ошибку
+	if err != nil {
+		return nil, fmt.Errorf("failed to save: %w", err)
+	}
+	var res []repository.SaveAllReturn
+	return res, nil
 }
 
 func (m *MockRepository) Find(id string) (string, error) {

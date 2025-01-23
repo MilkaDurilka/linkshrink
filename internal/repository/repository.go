@@ -3,6 +3,7 @@ package repository
 import (
 	"errors"
 	"linkshrink/internal/config"
+	"linkshrink/internal/utils"
 	"linkshrink/internal/utils/logger"
 
 	"go.uber.org/zap"
@@ -18,8 +19,19 @@ type URLData struct {
 	OriginalURL string `json:"original_url"`
 }
 
+type SaveAllParam struct {
+	CorrelationID string
+	OriginalURL   string
+}
+
+type SaveAllReturn struct {
+	CorrelationID string
+	ID      string
+}
+
 type URLRepository interface {
 	Save(originalURL string) (id string, err error)
+	SaveAll(params []utils.BatchShortenParam) ([]SaveAllReturn, error)
 	Find(id string) (string, error)
 }
 

@@ -18,15 +18,15 @@ type PingableRepository interface {
 	Ping() error
 }
 
-type Transaction interface {
-	Commit() error
-	Rollback() error
-}
+// type Transaction interface {
+// 	Commit() error
+// 	Rollback() error
+// }
 
-type TransactableRepository interface {
-	URLRepository
-	Begin() (*sql.Tx, error)
-}
+// type TransactableRepository interface {
+// 	URLRepository
+// 	Begin() (*sql.Tx, error)
+// }
 
 type PostgresRepository struct {
 	db          *sql.DB
@@ -85,6 +85,44 @@ func (p *PostgresRepository) Save(originalURL string) (string, error) {
 	}
 
 	return id, nil
+}
+
+func (p *PostgresRepository) SaveAll(params []utils.BatchShortenParam) ([]SaveAllReturn, error) {
+	query := "INSERT INTO urls (uuid, original_url) VALUES "
+	values := []string{}
+	args := []interface{}{}
+	var res []SaveAllReturn
+
+	for i, row := range params {
+			id := p.idGenerator.GenerateID()
+			values = append(values, fmt.Sprintf("($%d, $%d)", i*2+1, i*2+2))
+			args = append(args, id, row.OriginalURL)
+			res = append(res, SaveAllReturn{
+				ID: id,
+				CorrelationID: row.CorrelationID,
+			})
+	}
+
+	query += fmt.Sprintf("%s RETURNING uuid, original_url;", values)
+
+	_, err := p.db.Exec(query, args...)
+
+	if err != nil {
+		// var pgErr *pgconn.PgError
+		// if errors.As(err, &pgErr) {
+		// 	if pgErr.Code == pgerrcode.UniqueViolation {
+		// TODO: да, плохо ( Но методом выше ошибка не ловится, не понимаю как исправить
+		if err.Error() == `ERROR: duplicate key value violates unique constraint "idx_original_url" (SQLSTATE 23505)` {
+			return res, &errorsUtils.UniqueViolationError{Err: err}
+			// } else {
+			// 	return "", errors.New("Ошибка: " + pgErr.Message + ", Код: " + pgErr.Code)
+			// }
+		} else {
+			return nil, errors.New("error inserting URL: " + err.Error())
+		}
+	}
+
+	return res, nil
 }
 
 func (p *PostgresRepository) Find(id string) (string, error) {

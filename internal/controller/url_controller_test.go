@@ -10,8 +10,8 @@ import (
 	"testing"
 
 	"linkshrink/internal/config"
-	"linkshrink/internal/repository"
 	"linkshrink/internal/service"
+	"linkshrink/internal/utils"
 
 	"github.com/gorilla/mux"
 	"github.com/stretchr/testify/assert"
@@ -30,24 +30,29 @@ func (m *MockURLService) Shorten(baseURL string, url string) (string, error) {
 	return args.String(0), args.Error(1)
 }
 
+func (m *MockURLService) BatchShorten(baseURL string, params []utils.BatchShortenParam) ([]utils.BatchShortenReturnParam, error){
+	args := m.Called(baseURL, params)
+	return args[0].([]utils.BatchShortenReturnParam), args.Error(1)
+}
+
 func (m *MockURLService) GetOriginalURL(id string) (string, error) {
 	args := m.Called(id)
 	return args.String(0), args.Error(1)
 }
 
-func (m *MockURLService) BeginTransaction() (repository.Transaction, error) {
-	args := m.Called()
-	tx, ok := args.Get(0).(repository.Transaction)
-	if !ok {
-		return nil, errors.New("failed to cast to ITransaction")
-	}
-	err := args.Error(1)
-	if err != nil {
-		return nil, errors.New("begin transaction error")
-	}
+// func (m *MockURLService) BeginTransaction() (repository.Transaction, error) {
+// 	args := m.Called()
+// 	tx, ok := args.Get(0).(repository.Transaction)
+// 	if !ok {
+// 		return nil, errors.New("failed to cast to ITransaction")
+// 	}
+// 	err := args.Error(1)
+// 	if err != nil {
+// 		return nil, errors.New("begin transaction error")
+// 	}
 
-	return tx, nil
-}
+// 	return tx, nil
+// }
 
 var cfg = config.Config{
 	Address: "Address",
